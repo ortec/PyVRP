@@ -55,6 +55,13 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
     auto *uRoute = U->route();
     auto *vRoute = V->route();
 
+    // If we exchange segments between routes with different vehicle types the
+    // segments cannot be fixed (contain clients fixed to their vehicle types).
+    if (uRoute->vehicleType() != vRoute->vehicleType()
+        && (uRoute->isFixed(U->idx() + 1, uRoute->size() + 1)
+            || vRoute->isFixed(V->idx() + 1, vRoute->size() + 1)))
+        return 0;
+
     // Two routes. Current situation is U -> n(U), and V -> n(V). Proposed move
     // is U -> n(V) and V -> n(U).
     Distance const current = data.dist(U->client(), n(U)->client())

@@ -118,26 +118,87 @@ Solution::Solution(ProblemData const &data, RandomNumberGenerator &rng)
     std::iota(clients.begin(), clients.end(), 1);
     std::shuffle(clients.begin(), clients.end(), rng);
 
-    // Distribute clients evenly over the routes: the total number of clients
-    // per vehicle, with an adjustment in case the division is not perfect.
-    auto const numVehicles = data.numVehicles();
-    auto const numClients = data.numClients();
-    auto const perVehicle = std::max<size_t>(numClients / numVehicles, 1);
-    auto const perRoute = perVehicle + (numClients % numVehicles != 0);
-    auto const numRoutes = (numClients + perRoute - 1) / perRoute;
-
-    std::vector<std::vector<Client>> routes(numRoutes);
-    for (size_t idx = 0; idx != numClients; ++idx)
-        routes[idx / perRoute].push_back(clients[idx]);
-
-    routes_.reserve(numRoutes);
-    size_t count = 0;
-    for (size_t vehType = 0; vehType != data.numVehicleTypes(); ++vehType)
+    // Determine clients to assign per vehicle type, last type is for rest
+    auto const numVehTypes = data.numVehicleTypes();
+    std::vector<std::vector<Client>> unassigned(numVehTypes + 1);
+    for (size_t idx = 1; idx != data.numClients() + 1; ++idx)
     {
-        auto const numAvailable = data.vehicleType(vehType).numAvailable;
-        for (size_t i = 0; i != numAvailable; ++i)
-            if (count < routes.size())
-                routes_.emplace_back(data, routes[count++], vehType);
+        auto const t
+            = data.location(idx).fixedVehicleType.value_or(numVehTypes);
+        unassigned[t].push_back(idx);
+    }
+
+    if (unassigned[numVehTypes].size() < data.numClients())
+    {
+        // Assign clients taking into account clients fixed to vehicle types
+        std::vector<std::vector<Client>> routes(data.numVehicles());
+        size_t countUnassigned = data.numClients();
+        while (countUnassigned > 0)
+        {
+            // Loop over vehicles and assign each vehicle one client, either a
+            // fixed client or one of the remaining clients.
+            size_t rIdx = 0;
+            for (size_t vehType = 0; vehType != numVehTypes; ++vehType)
+            {
+                auto const numAvailable
+                    = data.vehicleType(vehType).numAvailable;
+                for (size_t i = 0; i != numAvailable; ++i)
+                {
+                    // First try to assign fixed clients, then rest
+                    auto const t
+                        = unassigned[vehType].empty() ? numVehTypes : vehType;
+                    if (!unassigned[t].empty())
+                    {
+                        routes[rIdx].push_back(unassigned[t].back());
+                        unassigned[t].pop_back();
+                        countUnassigned--;
+                    }
+                    rIdx++;
+                }
+            }
+        }
+
+        // Finally shuffle each route (to avoid all fixed clients being first)
+        // before adding it to the solution.
+        size_t rIdx = 0;
+        for (size_t vehType = 0; vehType != data.numVehicleTypes(); ++vehType)
+        {
+            auto const numAvailable = data.vehicleType(vehType).numAvailable;
+            for (size_t i = 0; i != numAvailable; ++i)
+            {
+                if (!routes[rIdx].empty())
+                {
+                    std::shuffle(routes[rIdx].begin(), routes[rIdx].end(), rng);
+                    routes_.emplace_back(data, routes[rIdx], vehType);
+                }
+                rIdx++;
+            }
+        }
+    }
+    else
+    {
+        // Distribute clients evenly over the routes: the total number of
+        // clients per vehicle, with an adjustment in case the division is not
+        // perfect.
+        auto const numVehicles = data.numVehicles();
+        auto const numClients = data.numClients();
+        auto const perVehicle = std::max<size_t>(numClients / numVehicles, 1);
+        auto const perRoute = perVehicle + (numClients % numVehicles != 0);
+        auto const numRoutes = (numClients + perRoute - 1) / perRoute;
+
+        std::vector<std::vector<Client>> routes(numRoutes);
+        for (size_t idx = 0; idx != numClients; ++idx)
+            routes[idx / perRoute].push_back(clients[idx]);
+
+        routes_.reserve(numRoutes);
+        size_t count = 0;
+        for (size_t vehType = 0; vehType != data.numVehicleTypes(); ++vehType)
+        {
+            auto const numAvailable = data.vehicleType(vehType).numAvailable;
+            for (size_t i = 0; i != numAvailable; ++i)
+                if (count < routes.size())
+                    routes_.emplace_back(data, routes[count++], vehType);
+        }
     }
 
     makeNeighbours();

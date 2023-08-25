@@ -294,6 +294,10 @@ Cost Exchange<N, M>::evaluate(Route::Node *U,
         if (U == n(V))
             return 0;
 
+        if (U->route()->vehicleType() != V->route()->vehicleType()
+            && U->route()->isFixed(U->idx(), U->idx() + N - 1))
+            return 0;
+
         return evalRelocateMove(U, V, costEvaluator);
     }
     else
@@ -303,6 +307,11 @@ Cost Exchange<N, M>::evaluate(Route::Node *U,
                 return 0;
 
         if (adjacent(U, V))
+            return 0;
+
+        if (U->route()->vehicleType() != V->route()->vehicleType()
+            && (U->route()->isFixed(U->idx(), U->idx() + N - 1)
+                || V->route()->isFixed(V->idx(), V->idx() + M - 1)))
             return 0;
 
         return evalSwapMove(U, V, costEvaluator);

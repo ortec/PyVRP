@@ -10,6 +10,7 @@ from pyvrp import (
     Solution,
     VehicleType,
 )
+from pyvrp import Route as SolRoute
 from pyvrp.search import (
     LocalSearch,
     MoveTwoClientsReversed,
@@ -53,6 +54,40 @@ def test_single_route_OkSmall(ok_small):
         improved_cost = cost_evaluator.penalised_cost(improved_sol)
         other_cost = cost_evaluator.penalised_cost(other)
         assert_(improved_cost <= other_cost)
+
+
+def test_OkSmall_with_fixed_clients(ok_small):
+    """
+    This test checks that MoveTwoClientsReversed cannot find improving moves
+    when there is no segment of 2 clients without fixed clients.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(ok_small.clients(), (0, 1, None, None))
+        ],
+        vehicle_types=[
+            VehicleType(10, 1),
+            VehicleType(10, 1),
+            VehicleType(10, 1),
+        ],
+    )
+    cost_evaluator = CostEvaluator(20, 6)
+    rng = RandomNumberGenerator(seed=42)
+
+    nb_params = NeighbourhoodParams(nb_granular=data.num_clients)
+    ls = LocalSearch(data, rng, compute_neighbours(data, nb_params))
+    ls.add_node_operator(MoveTwoClientsReversed(data))
+
+    solution = Solution(
+        data, [SolRoute(data, [1, 4], 0), SolRoute(data, [3, 2], 1)]
+    )
+    assert_equal(solution, ls.search(solution, cost_evaluator))
 
 
 @mark.parametrize("seed", [2643, 2742, 2941, 3457, 4299, 4497, 6178, 6434])

@@ -197,6 +197,13 @@ Cost SwapStar::evaluate(Route *routeU,
     for (auto *U : *routeU)
         for (auto *V : *routeV)
         {
+            // If we swap between different vehicle types we cannot have U or V
+            // being fixed to its vehicle type
+            if (routeU->vehicleType() != routeV->vehicleType()
+                && (data.location(U->client()).fixedVehicleType.has_value()
+                    || data.location(V->client()).fixedVehicleType.has_value()))
+                continue;
+
             Cost deltaCost = 0;
 
             auto const uDemand = data.location(U->client()).demand;

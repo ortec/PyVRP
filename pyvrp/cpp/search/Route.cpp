@@ -156,6 +156,8 @@ void Route::update()
         auto const dist = data.dist(nodes[idx - 1]->client(), node->client());
         stats[idx].cumDist = stats[idx - 1].cumDist + dist;
         stats[idx].cumLoad = stats[idx - 1].cumLoad + clientData.demand;
+        stats[idx].cumFixed
+            = stats[idx - 1].cumFixed + clientData.fixedVehicleType.has_value();
     }
 
 #ifndef PYVRP_NO_TIME_WINDOWS

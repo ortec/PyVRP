@@ -863,3 +863,42 @@ def test_route_shift_duration(
     # earliest complete time is 14'056 + 6'221 = 20'277.
     route = Route(data, [1, 2], vehicle_type=0)
     assert_allclose(route.time_warp(), expected)
+
+
+def test_random_solution_with_fixed_clients():
+    # Read in instance with 7 customers where 5 customers are fixed
+    data = read("data/OkSmallFixedClients.txt")
+    data = data.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(
+                data.clients(), (0, 0, 0, 1, 1, None, None)
+            )
+        ],
+        vehicle_types=[
+            VehicleType(1, 1),
+            VehicleType(1, 1),
+            VehicleType(1, 1),
+            VehicleType(1, 1),
+        ],
+    )
+    rng = RandomNumberGenerator(seed=2)
+
+    solution = Solution.make_random(data, rng)
+    routes = solution.get_routes()
+
+    # Clients 1, 2 and 3 should be fixed in the first route
+    # Clients 4 and 5 should be fixed in second route
+    # Remaining two routes should each get one client
+    assert_(1 in routes[0])
+    assert_(2 in routes[0])
+    assert_(3 in routes[0])
+    assert_(4 in routes[1])
+    assert_(5 in routes[1])
+    assert_equal(len(routes[2]), 1)
+    assert_equal(len(routes[3]), 1)

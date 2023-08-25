@@ -74,6 +74,7 @@ private:
     {
         Distance cumDist;             // Cumulative dist to this node (incl.)
         Load cumLoad;                 // Cumulative load to this node (incl.)
+        size_t cumFixed;              // Cum. num. of fixed clients (incl.)
         TimeWindowSegment tws;        // Node's time window data
         TimeWindowSegment twsAfter;   // TWS of client -> depot (incl.)
         TimeWindowSegment twsBefore;  // TWS of depot -> client (incl.)
@@ -200,6 +201,13 @@ public:
      * Calculates the load for segment [start, end].
      */
     [[nodiscard]] inline Load loadBetween(size_t start, size_t end) const;
+
+    /**
+     * Calculates whether segment [start, end] has fixed clients.
+     *
+     * @return true if segment contains fixed client, false otherwise
+     */
+    [[nodiscard]] inline bool isFixed(size_t start, size_t end) const;
 
     /**
      * Center point of the client locations on this route.
@@ -394,6 +402,19 @@ Load Route::loadBetween(size_t start, size_t end) const
 
     assert(startLoad <= endLoad);
     return endLoad - startLoad + atStart;
+}
+
+bool Route::isFixed(size_t start, size_t end) const
+{
+    assert(start <= end && end < nodes.size());
+
+    auto const startFixed
+        = data.location(nodes[start]->client()).fixedVehicleType.has_value();
+    auto const startCumFixed = stats[start].cumFixed;
+    auto const endCumFixed = stats[end].cumFixed;
+
+    assert(startCumFixed <= endCumFixed);
+    return startFixed || endCumFixed > startCumFixed;
 }
 }  // namespace pyvrp::search
 

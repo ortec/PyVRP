@@ -345,3 +345,83 @@ def test_relocate_fixed_vehicle_cost(ok_small, op, base_cost, fixed_cost):
     assert_allclose(
         op.evaluate(route1[1], route2[0], cost_eval), base_cost + fixed_cost
     )
+
+
+def test_cannot_relocate_fixed_clients_to_other_route(ok_small):
+    """
+    This test asserts that no client will be relocated to a non-empty route
+    when all clients are fixed in route. However, relocating within the route
+    gives improvement.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=0,
+            )
+            for client in ok_small.clients()
+        ],
+        vehicle_types=[VehicleType(1, 1), VehicleType(2, 1)],
+    )
+    cost_evaluator = CostEvaluator(100_000, 6)
+    # Use a huge cost for load penalties such that improved solution would be
+    # obtained by moving client(s) to (empty) route
+    rng = RandomNumberGenerator(seed=42)
+
+    nb_params = NeighbourhoodParams(nb_granular=data.num_clients)
+    ls = LocalSearch(data, rng, compute_neighbours(data, nb_params))
+    ls.add_node_operator(Exchange10(data))
+
+    single_route = list(range(1, data.num_clients + 1))
+    solution = Solution(data, [single_route])
+    improved_solution = ls.search(solution, cost_evaluator)
+
+    # The new solution should strictly improve on our original solution, but
+    # should not use more routes.
+    assert_equal(improved_solution.num_routes(), 1)
+    current_cost = cost_evaluator.penalised_cost(solution)
+    improved_cost = cost_evaluator.penalised_cost(improved_solution)
+    assert_(improved_cost < current_cost)
+
+
+def test_cannot_swap_when_all_but_one_client_is_fixed(ok_small):
+    """
+    This test asserts that solution cannot be improved because a swap move is
+    not possible when only one client is not fixed and can be exchanged.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(ok_small.clients(), (0, 1, 2, None))
+        ],
+        vehicle_types=[
+            VehicleType(10, 1),
+            VehicleType(10, 1),
+            VehicleType(10, 1),
+        ],
+    )
+
+    cost_evaluator = CostEvaluator(20, 6)
+    rng = RandomNumberGenerator(seed=42)
+
+    nb_params = NeighbourhoodParams(nb_granular=data.num_clients)
+    ls = LocalSearch(data, rng, compute_neighbours(data, nb_params))
+    ls.add_node_operator(Exchange11(data))
+
+    # No improvement can be found for solution
+    solution = Solution(
+        data,
+        [
+            SolRoute(data, [1, 4], 0),
+            SolRoute(data, [2], 1),
+            SolRoute(data, [3], 2),
+        ],
+    )
+    assert_equal(solution, ls.search(solution, cost_evaluator))

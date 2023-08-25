@@ -49,6 +49,49 @@ def test_OkSmall_instance(ok_small):
     assert_equal(improved_sol, expected)
 
 
+def test_OkSmall_instance_fixed_clients(ok_small):
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(ok_small.clients(), (None, 0, None, 1))
+        ],
+        vehicle_types=[
+            VehicleType(20, 1),
+            VehicleType(10, 1),
+            VehicleType(10, 1),
+        ],
+    )
+    cost_evaluator = CostEvaluator(20, 6)
+    rng = RandomNumberGenerator(seed=42)
+
+    nb_params = NeighbourhoodParams(nb_granular=data.num_clients)
+    ls = LocalSearch(data, rng, compute_neighbours(data, nb_params))
+    ls.add_node_operator(TwoOpt(data))
+
+    solution = Solution(
+        data, [SolRoute(data, [2, 1], 0), SolRoute(data, [4, 3], 1)]
+    )
+    improved_solution = ls.search(solution, cost_evaluator)
+
+    # The new solution should strictly improve on our original solution.
+    assert_equal(improved_solution.num_routes(), 2)
+    current_cost = cost_evaluator.penalised_cost(solution)
+    improved_cost = cost_evaluator.penalised_cost(improved_solution)
+    assert_(improved_cost < current_cost)
+
+    # Without fixed clients the improved solution [[2, 3, 4, 1], [], []] would
+    # have been found, but with fixed clients 2 and 4 the following (less)
+    # improving solution is found: [[2, 3, 1], [4], []].
+    routes = improved_solution.get_routes()
+    assert_equal(routes[0].visits(), [2, 3, 1])
+    assert_equal(routes[1].visits(), [4])
+
+
 @mark.parametrize(
     "vehicle_types",
     [

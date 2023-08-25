@@ -33,6 +33,7 @@ class Client:
     release_time: int
     prize: int
     required: bool
+    fixed_vehicle_type: Optional[int]
     def __init__(
         self,
         x: int,
@@ -44,6 +45,7 @@ class Client:
         release_time: int = 0,
         prize: int = 0,
         required: bool = True,
+        fixed_vehicle_type: Optional[int] = None,
     ) -> None: ...
 
 class VehicleType:

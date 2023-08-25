@@ -15,7 +15,8 @@ ProblemData::Client::Client(Coordinate x,
                             Duration twLate,
                             Duration releaseTime,
                             Cost prize,
-                            bool required)
+                            bool required,
+                            std::optional<size_t> fixedVehicleType)
     : x(x),
       y(y),
       demand(demand),
@@ -24,7 +25,8 @@ ProblemData::Client::Client(Coordinate x,
       twLate(twLate),
       releaseTime(releaseTime),
       prize(prize),
-      required(required)
+      required(required),
+      fixedVehicleType(fixedVehicleType)
 {
     if (demand < 0)
         throw std::invalid_argument("demand must be >= 0.");
@@ -154,6 +156,9 @@ ProblemData::ProblemData(std::vector<Client> const &clients,
 
     if (depot.releaseTime != 0)
         throw std::invalid_argument("Depot release time must be 0.");
+
+    if (depot.fixedVehicleType.has_value())
+        throw std::invalid_argument("Depot cannot have a fixed vehicle type.");
 
     for (auto &client : clients_)
     {

@@ -16,15 +16,19 @@ from pyvrp import Client, ProblemData, VehicleType
         "tw_late",
         "release_time",
         "prize",
+        "required",
+        "fixed_vehicle_type",
     ),
     [
-        (1, 1, 1, 1, 0, 1, 0, 0),  # normal
-        (1, 1, 1, 0, 0, 1, 0, 0),  # zero duration
-        (1, 1, 0, 1, 0, 1, 0, 0),  # zero demand
-        (1, 1, 1, 1, 0, 0, 0, 0),  # zero length time interval
-        (-1, -1, 1, 1, 0, 1, 0, 0),  # negative coordinates
-        (1, 1, 1, 1, 0, 1, 1, 0),  # positive release time
-        (0, 0, 1, 1, 0, 1, 0, 1),  # positive prize
+        (1, 1, 1, 1, 0, 1, 0, 0, True, None),  # normal
+        (1, 1, 1, 0, 0, 1, 0, 0, True, None),  # zero duration
+        (1, 1, 0, 1, 0, 1, 0, 0, True, None),  # zero demand
+        (1, 1, 1, 1, 0, 0, 0, 0, True, None),  # zero length time interval
+        (-1, -1, 1, 1, 0, 1, 0, 0, True, None),  # negative coordinates
+        (1, 1, 1, 1, 0, 1, 1, 0, True, None),  # positive release time
+        (0, 0, 1, 1, 0, 1, 0, 1, True, None),  # positive prize
+        (1, 1, 1, 1, 0, 1, 0, 0, False, None),  # not required
+        (1, 1, 1, 1, 0, 1, 0, 0, True, 0),  # fixed in vehicle type
     ],
 )
 def test_client_constructor_initialises_data_fields_correctly(
@@ -36,13 +40,24 @@ def test_client_constructor_initialises_data_fields_correctly(
     tw_late: int,
     release_time: int,
     prize: int,
+    required: bool,
+    fixed_vehicle_type: bool,
 ):
     """
     Tests that the access properties return the data that was given to the
     Client's constructor.
     """
     client = Client(
-        x, y, demand, service_duration, tw_early, tw_late, release_time, prize
+        x,
+        y,
+        demand,
+        service_duration,
+        tw_early,
+        tw_late,
+        release_time,
+        prize,
+        required,
+        fixed_vehicle_type,
     )
     assert_allclose(client.x, x)
     assert_allclose(client.y, y)
@@ -52,6 +67,8 @@ def test_client_constructor_initialises_data_fields_correctly(
     assert_allclose(client.tw_late, tw_late)
     assert_allclose(client.release_time, release_time)
     assert_allclose(client.prize, prize)
+    assert_equal(client.required, required)
+    assert_equal(client.fixed_vehicle_type, fixed_vehicle_type)
 
 
 @pytest.mark.parametrize(

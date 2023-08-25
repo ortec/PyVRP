@@ -17,6 +17,10 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
     auto *uRoute = U->route();
     auto *vRoute = V->route();
 
+    if (uRoute->vehicleType() != vRoute->vehicleType()
+        && uRoute->isFixed(U->idx(), U->idx() + 1))
+        return 0;
+
     Distance const current = uRoute->distBetween(U->idx() - 1, U->idx() + 2)
                              + data.dist(V->client(), n(V)->client());
     Distance const proposed = data.dist(p(U)->client(), n(n(U))->client())

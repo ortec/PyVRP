@@ -172,6 +172,7 @@ def read(
             release_times[idx],
             prizes[idx],
             np.isclose(prizes[idx], 0),  # required only when prize is zero
+            None,  # fixed vehicle type not supported
         )
         for idx in range(dimension)
     ]

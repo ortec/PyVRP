@@ -52,6 +52,7 @@ public:
      *    release_time: int = 0,
      *    prize: int = 0,
      *    required: bool = True,
+     *    fixed_vehicle_type: Optional[int] = None,
      * )
      *
      * Simple data object storing all client data as (read-only) properties.
@@ -84,6 +85,8 @@ public:
      * required
      *     Whether this client must be part of a feasible solution. Default
      *     True.
+     * fixed_vehicle_type, optional
+     *     Vehicle type that this client must be assigned to (optional).
      */
     struct Client
     {
@@ -96,6 +99,9 @@ public:
         Duration const releaseTime;  // Earliest possible time to leave depot
         Cost const prize = 0;        // Prize for visiting this client
         bool const required = true;  // Must client be in solution?
+                                     // Vehicle type that the client must be
+                                     // assigned to (optional).
+        std::optional<size_t> const fixedVehicleType = std::nullopt;
 
         Client(Coordinate x,
                Coordinate y,
@@ -105,7 +111,8 @@ public:
                Duration twLate = 0,
                Duration releaseTime = 0,
                Cost prize = 0,
-               bool required = true);
+               bool required = true,
+               std::optional<size_t> fixedVehicleType = std::nullopt);
     };
 
     /**

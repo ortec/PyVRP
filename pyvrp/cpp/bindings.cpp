@@ -62,7 +62,8 @@ PYBIND11_MODULE(_pyvrp, m)
                       pyvrp::Duration,
                       pyvrp::Duration,
                       pyvrp::Cost,
-                      bool>(),
+                      bool,
+                      std::optional<size_t>>(),
              py::arg("x"),
              py::arg("y"),
              py::arg("demand") = 0,
@@ -71,7 +72,8 @@ PYBIND11_MODULE(_pyvrp, m)
              py::arg("tw_late") = 0,
              py::arg("release_time") = 0,
              py::arg("prize") = 0,
-             py::arg("required") = true)
+             py::arg("required") = true,
+             py::arg("fixed_vehicle_type") = py::none())
         .def_readonly("x", &ProblemData::Client::x)
         .def_readonly("y", &ProblemData::Client::y)
         .def_readonly("demand", &ProblemData::Client::demand)
@@ -80,7 +82,9 @@ PYBIND11_MODULE(_pyvrp, m)
         .def_readonly("tw_late", &ProblemData::Client::twLate)
         .def_readonly("release_time", &ProblemData::Client::releaseTime)
         .def_readonly("prize", &ProblemData::Client::prize)
-        .def_readonly("required", &ProblemData::Client::required);
+        .def_readonly("required", &ProblemData::Client::required)
+        .def_readonly("fixed_vehicle_type",
+                      &ProblemData::Client::fixedVehicleType);
 
     py::class_<ProblemData::VehicleType>(
         m, "VehicleType", DOC(pyvrp, ProblemData, VehicleType))
