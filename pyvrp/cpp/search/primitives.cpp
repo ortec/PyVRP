@@ -21,23 +21,18 @@ Cost pyvrp::search::insertCost(Route::Node *U,
                                + data.dist(U->client(), n(V)->client())
                                - data.dist(V->client(), n(V)->client());
 
-    Cost deltaCost = static_cast<Cost>(deltaDist) - client.prize;
-
-    deltaCost += Cost(route->empty()) * route->fixedCost();
-
-    deltaCost += costEvaluator.loadPenalty(route->load() + client.demand,
-                                           route->capacity());
-    deltaCost -= costEvaluator.loadPenalty(route->load(), route->capacity());
-
     auto const vTWS = TWS::merge(data.durationMatrix(),
                                  route->twsBefore(V->idx()),
                                  TWS(U->client(), client),
                                  route->twsAfter(V->idx() + 1));
 
-    deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
-    deltaCost -= costEvaluator.twPenalty(route->timeWarp());
-
-    return deltaCost;
+    auto const cost = costEvaluator.penalisedRouteCost(
+        route->size() + 1,
+        route->distance() + deltaDist,
+        route->load() + client.demand,
+        vTWS.totalTimeWarp(),
+        data.vehicleType(route->vehicleType()));
+    return cost - client.prize - route->penalisedCost(costEvaluator);
 }
 
 Cost pyvrp::search::removeCost(Route::Node *U,
@@ -54,20 +49,15 @@ Cost pyvrp::search::removeCost(Route::Node *U,
                                - data.dist(p(U)->client(), U->client())
                                - data.dist(U->client(), n(U)->client());
 
-    Cost deltaCost = static_cast<Cost>(deltaDist) + client.prize;
-
-    deltaCost -= Cost(route->size() == 1) * route->fixedCost();
-
-    deltaCost += costEvaluator.loadPenalty(route->load() - client.demand,
-                                           route->capacity());
-    deltaCost -= costEvaluator.loadPenalty(route->load(), route->capacity());
-
     auto uTWS = TWS::merge(data.durationMatrix(),
                            route->twsBefore(U->idx() - 1),
                            route->twsAfter(U->idx() + 1));
 
-    deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
-    deltaCost -= costEvaluator.twPenalty(route->timeWarp());
-
-    return deltaCost;
+    auto const cost = costEvaluator.penalisedRouteCost(
+        route->size() - 1,
+        route->distance() + deltaDist,
+        route->load() - client.demand,
+        uTWS.totalTimeWarp(),
+        data.vehicleType(route->vehicleType()));
+    return cost + client.prize - route->penalisedCost(costEvaluator);
 }
