@@ -15,6 +15,8 @@ Cost TwoOpt::evalWithinRoute(Route::Node *U,
 {
     assert(U->route() == V->route());
     auto *route = U->route();
+    auto const &vehicleType = data.vehicleType(route->vehicleType());
+    auto const currentCost = route->penalisedCost(costEvaluator);
 
     // Current situation is U -> n(U) -> ... -> V -> n(V). Proposed move is
     // U -> V -> p(V) -> ... -> n(U) -> n(V). This reverses the segment from
@@ -30,21 +32,22 @@ Cost TwoOpt::evalWithinRoute(Route::Node *U,
                                - data.dist(V->client(), n(V)->client())
                                - route->distBetween(U->idx() + 1, V->idx());
 
-    Cost deltaCost = static_cast<Cost>(deltaDist);
+    // First compute bound based on dist and load
+    auto const dist = route->distance() + deltaDist;
+    auto const lbCost = costEvaluator.penalisedRouteCost(
+        route->size(), dist, route->load(), 0, vehicleType);
+    if (lbCost >= currentCost)
+        return 0;
 
-    deltaCost -= costEvaluator.twPenalty(route->timeWarp());
-
-    if (deltaCost >= 0)
-        return deltaCost;
-
+    // Compute time warp for route to get actual cost
     auto tws = route->twsBefore(U->idx());
     for (size_t idx = V->idx(); idx != U->idx(); --idx)
         tws = TWS::merge(data.durationMatrix(), tws, route->tws(idx));
     tws = TWS::merge(data.durationMatrix(), tws, route->twsAfter(V->idx() + 1));
 
-    deltaCost += costEvaluator.twPenalty(tws.totalTimeWarp());
-
-    return deltaCost;
+    auto const cost = costEvaluator.penalisedRouteCost(
+        route->size(), dist, route->load(), tws.totalTimeWarp(), vehicleType);
+    return cost - currentCost;
 }
 
 Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
@@ -57,31 +60,48 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
 
     // Two routes. Current situation is U -> n(U), and V -> n(V). Proposed move
     // is U -> n(V) and V -> n(U).
-    Distance const current = data.dist(U->client(), n(U)->client())
-                             + data.dist(V->client(), n(V)->client());
-    Distance const proposed = data.dist(U->client(), n(V)->client())
-                              + data.dist(V->client(), n(U)->client());
+    auto const currentCost = uRoute->penalisedCost(costEvaluator)
+                             + vRoute->penalisedCost(costEvaluator);
 
-    Cost deltaCost = static_cast<Cost>(proposed - current);
+    auto const &vehTypeU = data.vehicleType(uRoute->vehicleType());
+    auto const &vehTypeV = data.vehicleType(vRoute->vehicleType());
 
-    // We're going to incur fixed cost if a route is currently empty but
-    // becomes non-empty due to the proposed move.
-    if (uRoute->empty() && U->isDepot() && !n(V)->isDepot())
-        deltaCost += uRoute->fixedCost();
+    // Compute lower bound for new cost based on num clients, distance and load
+    // ->idx() corresponds to size of route up to that node
+    auto const sizeU = U->idx() + vRoute->size() - V->idx();
+    auto const sizeV = V->idx() + uRoute->size() - U->idx();
 
-    if (vRoute->empty() && V->isDepot() && !n(U)->isDepot())
-        deltaCost += vRoute->fixedCost();
+    auto const distU = uRoute->distBetween(0, U->idx())
+                       + data.dist(U->client(), n(V)->client())
+                       + vRoute->distance()
+                       - vRoute->distBetween(0, V->idx() + 1);
+    auto const distV = vRoute->distBetween(0, V->idx())
+                       + data.dist(V->client(), n(U)->client())
+                       + uRoute->distance()
+                       - uRoute->distBetween(0, U->idx() + 1);
 
-    // We lose fixed cost if a route becomes empty due to the proposed move.
-    if (!uRoute->empty() && U->isDepot() && n(V)->isDepot())
-        deltaCost -= uRoute->fixedCost();
+    // Proposed move appends the segment after V to U, and the segment after U
+    // to V. So we need to make a distinction between the loads at U and V, and
+    // the loads from clients visited after these nodes.
+    auto const curLoadUntilU = uRoute->loadBetween(0, U->idx());
+    auto const curLoadAfterU = uRoute->load() - curLoadUntilU;
+    auto const curLoadUntilV = vRoute->loadBetween(0, V->idx());
+    auto const curLoadAfterV = vRoute->load() - curLoadUntilV;
 
-    if (!vRoute->empty() && V->isDepot() && n(U)->isDepot())
-        deltaCost -= vRoute->fixedCost();
+    // Load for new routes
+    auto const loadU = curLoadUntilU + curLoadAfterV;
+    auto const loadV = curLoadUntilV + curLoadAfterU;
 
-    if (uRoute->isFeasible() && vRoute->isFeasible() && deltaCost >= 0)
-        return deltaCost;
+    auto const lbCostU
+        = costEvaluator.penalisedRouteCost(sizeU, distU, loadU, 0, vehTypeU);
+    auto const lbCostV
+        = costEvaluator.penalisedRouteCost(sizeV, distV, loadV, 0, vehTypeV);
 
+    if (lbCostU + lbCostV >= currentCost)
+        return 0;
+
+    // Add time warp for route U to get actual cost
+    Cost costU;
     if (V->idx() < vRoute->size())
     {
         auto const uTWS
@@ -90,7 +110,8 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
                          vRoute->twsBetween(V->idx() + 1, vRoute->size()),
                          uRoute->tws(uRoute->size() + 1));
 
-        deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
+        costU = costEvaluator.penalisedRouteCost(
+            sizeU, distU, loadU, uTWS.totalTimeWarp(), vehTypeU);
     }
     else
     {
@@ -98,11 +119,14 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
                                      uRoute->twsBefore(U->idx()),
                                      uRoute->tws(uRoute->size() + 1));
 
-        deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
+        costU = costEvaluator.penalisedRouteCost(
+            sizeU, distU, loadU, uTWS.totalTimeWarp(), vehTypeU);
     }
 
-    deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
+    if (costU + lbCostV >= currentCost)
+        return 0;
 
+    Cost costV;
     if (U->idx() < uRoute->size())
     {
         auto const vTWS
@@ -111,7 +135,8 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
                          uRoute->twsBetween(U->idx() + 1, uRoute->size()),
                          vRoute->tws(vRoute->size() + 1));
 
-        deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
+        costV = costEvaluator.penalisedRouteCost(
+            sizeV, distV, loadV, vTWS.totalTimeWarp(), vehTypeV);
     }
     else
     {
@@ -119,28 +144,10 @@ Cost TwoOpt::evalBetweenRoutes(Route::Node *U,
                                      vRoute->twsBefore(V->idx()),
                                      vRoute->tws(vRoute->size() + 1));
 
-        deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
+        costV = costEvaluator.penalisedRouteCost(
+            sizeV, distV, loadV, vTWS.totalTimeWarp(), vehTypeV);
     }
-
-    deltaCost -= costEvaluator.twPenalty(vRoute->timeWarp());
-
-    // Proposed move appends the segment after V to U, and the segment after U
-    // to V. So we need to make a distinction between the loads at U and V, and
-    // the loads from clients visited after these nodes.
-    auto const uLoad = uRoute->loadBetween(0, U->idx());
-    auto const uLoadAfter = uRoute->load() - uLoad;
-    auto const vLoad = vRoute->loadBetween(0, V->idx());
-    auto const vLoadAfter = vRoute->load() - vLoad;
-
-    deltaCost
-        += costEvaluator.loadPenalty(uLoad + vLoadAfter, uRoute->capacity());
-    deltaCost -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
-
-    deltaCost
-        += costEvaluator.loadPenalty(vLoad + uLoadAfter, vRoute->capacity());
-    deltaCost -= costEvaluator.loadPenalty(vRoute->load(), vRoute->capacity());
-
-    return deltaCost;
+    return costU + costV - currentCost;
 }
 
 void TwoOpt::applyWithinRoute(Route::Node *U, Route::Node *V) const

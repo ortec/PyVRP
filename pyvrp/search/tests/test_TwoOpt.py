@@ -166,9 +166,9 @@ def test_move_involving_empty_routes():
     non-empty route (or vice-versa) is correctly evaluated.
     """
     data = ProblemData(
-        clients=[Client(x=1, y=1), Client(x=1, y=0)],
+        clients=[Client(x=1, y=1, demand=1), Client(x=1, y=0, demand=1)],
         depots=[Client(x=0, y=0)],
-        vehicle_types=[VehicleType(0, 1, 10), VehicleType(0, 1, 100)],
+        vehicle_types=[VehicleType(1, 1, 10), VehicleType(1, 1, 100)],
         distance_matrix=np.zeros((3, 3), dtype=int),
         duration_matrix=np.zeros((3, 3), dtype=int),
     )
@@ -183,19 +183,21 @@ def test_move_involving_empty_routes():
     route2.update()  # depot -> depot
 
     op = TwoOpt(data)
-    cost_eval = CostEvaluator(0, 0)
+    cost_eval = CostEvaluator(1000, 0)
 
     # This move does not change the route structure, so the delta cost is 0.
     assert_allclose(op.evaluate(route1[2], route2[0], cost_eval), 0)
 
     # This move creates routes (depot -> 1 -> depot) and (depot -> 2 -> depot),
-    # making route 2 non-empty and thus incurring its fixed cost of 100.
-    assert_allclose(op.evaluate(route1[1], route2[0], cost_eval), 100)
+    # making route 2 non-empty and thus incurring its fixed cost of 100,
+    # but saving 1000 capacity violation penalty, so incurred cost is -900.
+    assert_allclose(op.evaluate(route1[1], route2[0], cost_eval), -900)
 
     # This move creates routes (depot -> depot) and (depot -> 1 -> 2 -> depot),
     # making route 1 empty, while making route 2 non-empty. The total fixed
-    # cost incurred is thus -10 + 100 = 90.
-    assert_allclose(op.evaluate(route1[0], route2[0], cost_eval), 90)
+    # cost incurred is thus -10 + 100 = 90, but the operator shortcuts and
+    # hence returns 0.
+    assert_allclose(op.evaluate(route1[0], route2[0], cost_eval), 0)
 
     # Now we reverse the visits of route 1 and 2, so that we can hit the cases
     # where route 1 is empty.
@@ -211,8 +213,9 @@ def test_move_involving_empty_routes():
     assert_allclose(op.evaluate(route1[0], route2[2], cost_eval), 0)
 
     # This move creates routes (depot -> 2 -> depot) and (depot -> 1 -> depot),
-    # making route 1 non-empty and thus incurring its fixed cost of 10.
-    assert_allclose(op.evaluate(route1[0], route2[1], cost_eval), 10)
+    # making route 1 non-empty and thus incurring its fixed cost of 10,
+    # but saving 1000 capacity violation penalty, so incurred cost is -990.
+    assert_allclose(op.evaluate(route1[0], route2[1], cost_eval), -990)
 
     # This move creates routes (depot -> 1 -> 2 -> depot) and (depot -> depot),
     # making route 1 non-empty, while making route 2 empty. The total fixed
