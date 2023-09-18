@@ -14,14 +14,18 @@ Cost SwapRoutes::evaluate(Route *U,
     if (U->vehicleType() == V->vehicleType() || U->empty() || V->empty())
         return 0;
 
-    Cost deltaCost = 0;
+    auto const currentCost
+        = U->penalisedCost(costEvaluator) + V->penalisedCost(costEvaluator);
+    auto const &vehTypeU = data.vehicleType(U->vehicleType());
+    auto const &vehTypeV = data.vehicleType(V->vehicleType());
 
-    // Changes in load capacity violations.
-    deltaCost += costEvaluator.loadPenalty(U->load(), V->capacity());
-    deltaCost -= costEvaluator.loadPenalty(U->load(), U->capacity());
+    auto const lbCostU = costEvaluator.penalisedRouteCost(
+        U->size(), U->distance(), U->load(), 0, vehTypeV);
+    auto const lbCostV = costEvaluator.penalisedRouteCost(
+        V->size(), V->distance(), V->load(), 0, vehTypeU);
 
-    deltaCost += costEvaluator.loadPenalty(V->load(), U->capacity());
-    deltaCost -= costEvaluator.loadPenalty(V->load(), V->capacity());
+    if (lbCostU + lbCostV >= currentCost)
+        return 0;
 
     // Changes in time warp.
     auto const uTWS = TWS::merge(data.durationMatrix(),
@@ -29,20 +33,23 @@ Cost SwapRoutes::evaluate(Route *U,
                                  U->twsBetween(1, U->size()),
                                  V->tws(V->size() + 1));
 
-    deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
-    deltaCost -= costEvaluator.twPenalty(U->timeWarp());
+    auto const costU = costEvaluator.penalisedRouteCost(
+        U->size(), U->distance(), U->load(), uTWS.totalTimeWarp(), vehTypeV);
+
+    if (costU + lbCostV >= currentCost)
+        return 0;
 
     auto const vTWS = TWS::merge(data.durationMatrix(),
                                  U->tws(0),
                                  V->twsBetween(1, V->size()),
                                  U->tws(U->size() + 1));
 
-    deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
-    deltaCost -= costEvaluator.twPenalty(V->timeWarp());
+    auto const costV = costEvaluator.penalisedRouteCost(
+        V->size(), V->distance(), V->load(), vTWS.totalTimeWarp(), vehTypeU);
 
     // TODO handle the case of depot differences (multiple depots). There is
     // some evaluation code for this in issue #188.
-    return deltaCost;
+    return costU + costV - currentCost;
 }
 
 void SwapRoutes::apply(Route *U, Route *V) const
