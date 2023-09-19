@@ -19,10 +19,13 @@ Cost SwapRoutes::evaluate(Route *U,
     auto const &vehTypeU = data.vehicleType(U->vehicleType());
     auto const &vehTypeV = data.vehicleType(V->vehicleType());
 
-    auto const lbCostU = costEvaluator.penalisedRouteCost(
-        U->size(), U->distance(), U->load(), 0, vehTypeV);
-    auto const lbCostV = costEvaluator.penalisedRouteCost(
-        V->size(), V->distance(), V->load(), 0, vehTypeU);
+    // Compute lower bound for new cost based on size, distance and load
+    RouteData uRouteData(U->size(), U->distance(), U->load(), 0);
+
+    RouteData vRouteData(V->size(), V->distance(), V->load(), 0);
+
+    auto const lbCostU = costEvaluator.penalisedCost(uRouteData, vehTypeV);
+    auto const lbCostV = costEvaluator.penalisedCost(vRouteData, vehTypeU);
 
     if (lbCostU + lbCostV >= currentCost)
         return 0;
@@ -32,9 +35,9 @@ Cost SwapRoutes::evaluate(Route *U,
                                  V->tws(0),
                                  U->twsBetween(1, U->size()),
                                  V->tws(V->size() + 1));
+    uRouteData.timeWarp = uTWS.totalTimeWarp();
 
-    auto const costU = costEvaluator.penalisedRouteCost(
-        U->size(), U->distance(), U->load(), uTWS.totalTimeWarp(), vehTypeV);
+    auto const costU = costEvaluator.penalisedCost(uRouteData, vehTypeV);
 
     if (costU + lbCostV >= currentCost)
         return 0;
@@ -43,9 +46,9 @@ Cost SwapRoutes::evaluate(Route *U,
                                  U->tws(0),
                                  V->twsBetween(1, V->size()),
                                  U->tws(U->size() + 1));
+    vRouteData.timeWarp = vTWS.totalTimeWarp();
 
-    auto const costV = costEvaluator.penalisedRouteCost(
-        V->size(), V->distance(), V->load(), vTWS.totalTimeWarp(), vehTypeU);
+    auto const costV = costEvaluator.penalisedCost(vRouteData, vehTypeU);
 
     // TODO handle the case of depot differences (multiple depots). There is
     // some evaluation code for this in issue #188.

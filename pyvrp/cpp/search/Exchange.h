@@ -221,23 +221,23 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
         auto const currentCost = uRoute->penalisedCost(costEvaluator)
                                  + vRoute->penalisedCost(costEvaluator);
 
-        // Compute lower bound for new cost based on clients, distance and load
-        auto const sizeU = uRoute->size() - N + M;
-        auto const sizeV = vRoute->size() + N - M;
-
-        auto const distU = uRoute->distance() + deltaDistU;
-        auto const distV = vRoute->distance() + deltaDistV;
-
         auto const deltaLoad
             = uRoute->loadBetween(U->idx(), U->idx() + N - 1)
               - vRoute->loadBetween(V->idx(), V->idx() + M - 1);
-        auto const loadU = uRoute->load() - deltaLoad;
-        auto const loadV = vRoute->load() + deltaLoad;
 
-        auto const lbCostU = costEvaluator.penalisedRouteCost(
-            sizeU, distU, loadU, 0, vehTypeU);
-        auto const lbCostV = costEvaluator.penalisedRouteCost(
-            sizeV, distV, loadV, 0, vehTypeV);
+        // Compute lower bound for new cost based on size, distance and load
+        RouteData uRouteData(uRoute->size() - N + M,
+                             uRoute->distance() + deltaDistU,
+                             uRoute->load() - deltaLoad,
+                             0);
+
+        RouteData vRouteData(vRoute->size() + N - M,
+                             vRoute->distance() + deltaDistV,
+                             vRoute->load() + deltaLoad,
+                             0);
+
+        auto const lbCostU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
+        auto const lbCostV = costEvaluator.penalisedCost(vRouteData, vehTypeV);
 
         if (lbCostU + lbCostV >= currentCost)
             return 0;
@@ -248,10 +248,10 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             uRoute->twsBefore(U->idx() - 1),
             vRoute->twsBetween(V->idx(), V->idx() + M - 1),
             uRoute->twsAfter(U->idx() + N));
+        uRouteData.timeWarp = uTWS.totalTimeWarp();
+        auto const costU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
 
-        auto const costU = costEvaluator.penalisedRouteCost(
-            sizeV, distU, loadU, uTWS.totalTimeWarp(), vehTypeU);
-
+        // Small optimization, check intermediate bound
         if (costU + lbCostV >= currentCost)
             return 0;
 
@@ -261,22 +261,22 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             vRoute->twsBefore(V->idx() - 1),
             uRoute->twsBetween(U->idx(), U->idx() + N - 1),
             vRoute->twsAfter(V->idx() + M));
-
-        auto const costV = costEvaluator.penalisedRouteCost(
-            sizeV, distV, loadV, vTWS.totalTimeWarp(), vehTypeV);
+        vRouteData.timeWarp = vTWS.totalTimeWarp();
+        auto const costV = costEvaluator.penalisedCost(vRouteData, vehTypeV);
 
         return costU + costV - currentCost;
     }
     else  // within same route
     {
-        auto const *route = uRoute;
-        auto const currentCost = route->penalisedCost(costEvaluator);
-        auto const dist = route->distance() + deltaDistU + deltaDistV;
+        auto const currentCost = uRoute->penalisedCost(costEvaluator);
 
-        // First compute bound based on dist and load
-        auto const lbCost = costEvaluator.penalisedRouteCost(
-            uRoute->size(), dist, uRoute->load(), 0, vehTypeU);
-        if (lbCost >= currentCost)
+        // First compute bound based on size, dist and load
+        RouteData routeData(uRoute->size(),
+                            uRoute->distance() + deltaDistU + deltaDistV,
+                            uRoute->load(),
+                            0);
+
+        if (costEvaluator.penalisedCost(routeData, vehTypeU) >= currentCost)
             return 0;
 
         if (U->idx() < V->idx())
@@ -288,14 +288,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
                 uRoute->twsBetween(U->idx() + N, V->idx() - 1),
                 uRoute->twsBetween(U->idx(), U->idx() + N - 1),
                 uRoute->twsAfter(V->idx() + M));
-
-            auto const cost
-                = costEvaluator.penalisedRouteCost(uRoute->size(),
-                                                   dist,
-                                                   uRoute->load(),
-                                                   tws.totalTimeWarp(),
-                                                   vehTypeU);
-            return cost - currentCost;
+            routeData.timeWarp = tws.totalTimeWarp();
         }
         else
         {
@@ -306,15 +299,9 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
                 uRoute->twsBetween(V->idx() + M, U->idx() - 1),
                 uRoute->twsBetween(V->idx(), V->idx() + M - 1),
                 uRoute->twsAfter(U->idx() + N));
-
-            auto const cost
-                = costEvaluator.penalisedRouteCost(uRoute->size(),
-                                                   dist,
-                                                   uRoute->load(),
-                                                   tws.totalTimeWarp(),
-                                                   vehTypeU);
-            return cost - currentCost;
+            routeData.timeWarp = tws.totalTimeWarp();
         }
+        return costEvaluator.penalisedCost(routeData, vehTypeU) - currentCost;
     }
 }
 
