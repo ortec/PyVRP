@@ -24,6 +24,51 @@ template <typename T> concept CostEvaluatable = requires(T arg)
 };
 
 /**
+ * RouteData(
+ *     size: int,
+ *     distance: Distance,
+ *     load: Load,
+ *     timeWarp: Duration
+ * )
+ *
+ * Simple data object storing route data as properties.
+ *
+ * Parameters
+ * ----------
+ * size
+ *     Size of the route.
+ * distance
+ *     Distance traveled in the route.
+ * load
+ *     Load carried in the route.
+ * timeWarp
+ *     Time warp for the route.
+ *
+ * Attributes
+ * ----------
+ * size
+ *     Size of the route.
+ * distance
+ *     Distance traveled in the route.
+ * load
+ *     Load carried in the route.
+ * timeWarp
+ *     Time warp for the route.
+ */
+struct RouteData
+{
+    size_t size;
+    Distance distance;
+    Load load;
+    Duration timeWarp;
+
+    RouteData(size_t size, Distance distance, Load load, Duration timeWarp)
+        : size(size), distance(distance), load(load), timeWarp(timeWarp)
+    {
+    }
+};
+
+/**
  * CostEvaluator(capacity_penalty: int, tw_penalty: int)
  *
  * Creates a CostEvaluator instance.
@@ -67,11 +112,8 @@ public:
      * of properties.
      */
     [[nodiscard]] inline Cost
-    penalisedRouteCost(size_t const numClients,
-                       Distance const distance,
-                       Load const load,
-                       Duration const timeWarp,
-                       ProblemData::VehicleType const &vehicleType) const;
+    penalisedCost(RouteData const &routeData,
+                  ProblemData::VehicleType const &vehicleType) const;
 
     /**
      * Computes a smoothed objective (penalised cost) for an object that is
@@ -158,18 +200,15 @@ template <CostEvaluatable T> Cost CostEvaluator::cost(T const &arg) const
                             : std::numeric_limits<Cost>::max();
 }
 
-Cost CostEvaluator::penalisedRouteCost(
-    size_t const num_clients,
-    Distance const distance,
-    Load const load,
-    Duration const timeWarp,
+Cost CostEvaluator::penalisedCost(
+    RouteData const &routeData,
     ProblemData::VehicleType const &vehicleType) const
 {
-    auto const isUsed = num_clients > 0;
+    auto const isUsed = routeData.size > 0;
     auto const fixedCost = static_cast<Cost>(isUsed) * vehicleType.fixedCost;
-    auto const distanceCost = static_cast<Cost>(distance);
-    auto const loadPen = loadPenalty(load, vehicleType.capacity);
-    auto const twPen = twPenalty(timeWarp);
+    auto const distanceCost = static_cast<Cost>(routeData.distance);
+    auto const loadPen = loadPenalty(routeData.load, vehicleType.capacity);
+    auto const twPen = twPenalty(routeData.timeWarp);
 
     return fixedCost + distanceCost + loadPen + twPen;
 }
