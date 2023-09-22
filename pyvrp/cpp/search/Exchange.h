@@ -108,7 +108,14 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
 
     if (uRoute != vRoute)
     {
-        if (uRoute->isFeasible() && deltaCost >= 0)
+        // First subtract penalties that may be resolved by this move
+        // Note: we assume time warp can only increase for the route of node V
+        // as the route cannot become shorter by inserting U (triangle ineq.)
+        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
+        deltaCost
+            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
+
+        if (deltaCost >= 0)
             return deltaCost;
 
         auto uTWS = TimeWindowSegment::merge(data.durationMatrix(),
@@ -116,14 +123,11 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
                                              uRoute->twsAfter(U->idx() + N));
 
         deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
-        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
 
         auto const loadDiff = uRoute->loadBetween(U->idx(), U->idx() + N - 1);
 
         deltaCost += costEvaluator.loadPenalty(uRoute->load() - loadDiff,
                                                uRoute->capacity());
-        deltaCost
-            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
 
         if (deltaCost >= 0)    // if delta cost of just U's route is not enough
             return deltaCost;  // even without V, the move will never be good.
@@ -206,7 +210,15 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
 
     if (uRoute != vRoute)
     {
-        if (uRoute->isFeasible() && vRoute->isFeasible() && deltaCost >= 0)
+        // First subtract all penalties that could be resolved
+        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
+        deltaCost
+            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
+        deltaCost -= costEvaluator.twPenalty(vRoute->timeWarp());
+        deltaCost
+            -= costEvaluator.loadPenalty(vRoute->load(), vRoute->capacity());
+
+        if (deltaCost >= 0)
             return deltaCost;
 
         auto uTWS = TimeWindowSegment::merge(
@@ -216,7 +228,6 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             uRoute->twsAfter(U->idx() + N));
 
         deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
-        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
 
         auto const loadU = uRoute->loadBetween(U->idx(), U->idx() + N - 1);
         auto const loadV = vRoute->loadBetween(V->idx(), V->idx() + M - 1);
@@ -224,8 +235,6 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
 
         deltaCost += costEvaluator.loadPenalty(uRoute->load() - loadDiff,
                                                uRoute->capacity());
-        deltaCost
-            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
 
         auto vTWS = TimeWindowSegment::merge(
             data.durationMatrix(),
@@ -234,12 +243,9 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             vRoute->twsAfter(V->idx() + M));
 
         deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
-        deltaCost -= costEvaluator.twPenalty(vRoute->timeWarp());
 
         deltaCost += costEvaluator.loadPenalty(vRoute->load() + loadDiff,
                                                vRoute->capacity());
-        deltaCost
-            -= costEvaluator.loadPenalty(vRoute->load(), vRoute->capacity());
     }
     else  // within same route
     {

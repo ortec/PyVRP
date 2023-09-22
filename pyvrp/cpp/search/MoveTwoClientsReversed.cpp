@@ -33,7 +33,14 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
 
     if (uRoute != vRoute)
     {
-        if (uRoute->isFeasible() && deltaCost >= 0)
+        // First subtract penalties that may be resolved by this move
+        // Note: we assume time warp can only increase for the route of node V
+        // as the route cannot become shorter by inserting U (triangle ineq.)
+        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
+        deltaCost
+            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
+
+        if (deltaCost >= 0)
             return deltaCost;
 
         auto uTWS = TWS::merge(data.durationMatrix(),
@@ -41,14 +48,11 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
                                uRoute->twsAfter(U->idx() + 2));
 
         deltaCost += costEvaluator.twPenalty(uTWS.totalTimeWarp());
-        deltaCost -= costEvaluator.twPenalty(uRoute->timeWarp());
 
         auto const loadDiff = uRoute->loadBetween(U->idx(), U->idx() + 1);
 
         deltaCost += costEvaluator.loadPenalty(uRoute->load() - loadDiff,
                                                uRoute->capacity());
-        deltaCost
-            -= costEvaluator.loadPenalty(uRoute->load(), uRoute->capacity());
 
         if (deltaCost >= 0)    // if delta cost of just U's route is not enough
             return deltaCost;  // even without V, the move will never be good

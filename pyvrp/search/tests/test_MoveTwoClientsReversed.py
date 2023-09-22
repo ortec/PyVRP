@@ -86,7 +86,7 @@ def test_relocate_fixed_vehicle_cost():
     data = ProblemData(
         clients=[Client(x=1, y=1), Client(x=1, y=0)],
         depots=[Client(x=0, y=0)],
-        vehicle_types=[VehicleType(0, 1, 7), VehicleType(0, 1, 13)],
+        vehicle_types=[VehicleType(0, 1, 13), VehicleType(0, 1, 7)],
         distance_matrix=np.zeros((3, 3), dtype=int),
         duration_matrix=np.zeros((3, 3), dtype=int),
     )
@@ -103,7 +103,7 @@ def test_relocate_fixed_vehicle_cost():
     # All distances, durations, and loads are equal. So the only cost change
     # can happen due to vehicle changes. In particular, we evaluate inserting
     # the two clients on route1 into the empty route2. That leaves route1 empty
-    # and has a fixed vehicle cost change of 13 - 7 = 6.
+    # and has a fixed vehicle cost change of 7 - 13 = -6.
     op = MoveTwoClientsReversed(data)
     cost_eval = CostEvaluator(0, 0)
-    assert_allclose(op.evaluate(route1[1], route2[0], cost_eval), 6)
+    assert_allclose(op.evaluate(route1[1], route2[0], cost_eval), -6)
