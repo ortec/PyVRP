@@ -25,7 +25,7 @@ class RelocateStar : public LocalSearchOperator<Route>
         Route::Node *to = nullptr;
     };
 
-    Exchange<1, 0> relocate;
+    Exchange<1, 0, false> relocate;
     Move move;
 
 public:

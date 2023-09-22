@@ -14,17 +14,24 @@ namespace pyvrp::search
  * The :math:`(N, M)`-exchange operators exchange :math:`N` consecutive clients
  * from :math:`U`'s route (starting at :math:`U`) with :math:`M` consecutive
  * clients from :math:`V`'s route (starting at :math:`V`). This includes
- * the RELOCATE and SWAP operators as special cases.
+ * the RELOCATE and SWAP operators as special cases. When using :math:`M = 0`,
+ * optionally the :math:`N` clients to be relocated can be reversed.
  *
  * The :math:`(N, M)`-exchange class uses C++ templates for different :math:`N`
- * and :math:`M` to efficiently evaluate these moves.
+ * and :math:`M` to efficiently evaluate these moves. If the template parameter
+ * `reversed` is set to true (only allowed if :math:`M = 0` and :math:`N > 0`),
+ * the segment of :math:`N` consecutive clients will be to be relocated will be
+ * reversed.
  */
-template <size_t N, size_t M>
+template <size_t N, size_t M, bool reversed>
 class Exchange : public LocalSearchOperator<Route::Node>
 {
     using LocalSearchOperator::LocalSearchOperator;
 
     static_assert(N >= M && N > 0, "N < M or N == 0 does not make sense");
+
+    static_assert(!reversed || (M == 0 && N > 1),
+                  "reversed only supported with M == 0 and N > 1");
 
     // Tests if the segment starting at node of given length contains the depot
     inline bool containsDepot(Route::Node *node, size_t segLength) const;
@@ -53,8 +60,9 @@ public:
     void apply(Route::Node *U, Route::Node *V) const override;
 };
 
-template <size_t N, size_t M>
-bool Exchange<N, M>::containsDepot(Route::Node *node, size_t segLength) const
+template <size_t N, size_t M, bool reversed>
+bool Exchange<N, M, reversed>::containsDepot(Route::Node *node,
+                                             size_t segLength) const
 {
     // size() is the position of the last client in the route. So the segment
     // must include the depot if idx + move length - 1 (-1 since we're also
@@ -63,8 +71,8 @@ bool Exchange<N, M>::containsDepot(Route::Node *node, size_t segLength) const
            || (node->idx() + segLength - 1 > node->route()->size());
 }
 
-template <size_t N, size_t M>
-bool Exchange<N, M>::overlap(Route::Node *U, Route::Node *V) const
+template <size_t N, size_t M, bool reversed>
+bool Exchange<N, M, reversed>::overlap(Route::Node *U, Route::Node *V) const
 {
     return U->route() == V->route()
            // We need max(M, 1) here because when V is the depot and M == 0,
@@ -73,17 +81,16 @@ bool Exchange<N, M>::overlap(Route::Node *U, Route::Node *V) const
            && V->idx() <= U->idx() + N - 1;
 }
 
-template <size_t N, size_t M>
-bool Exchange<N, M>::adjacent(Route::Node *U, Route::Node *V) const
+template <size_t N, size_t M, bool reversed>
+bool Exchange<N, M, reversed>::adjacent(Route::Node *U, Route::Node *V) const
 {
     return U->route() == V->route()
            && (U->idx() + N == V->idx() || V->idx() + M == U->idx());
 }
 
-template <size_t N, size_t M>
-Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
-                                      Route::Node *V,
-                                      CostEvaluator const &costEvaluator) const
+template <size_t N, size_t M, bool reversed>
+Cost Exchange<N, M, reversed>::evalRelocateMove(
+    Route::Node *U, Route::Node *V, CostEvaluator const &costEvaluator) const
 {
     assert(U->idx() > 0);
 
@@ -94,10 +101,21 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
                              + data.dist(V->client(), n(V)->client());
 
     auto *endU = N == 1 ? U : (*uRoute)[U->idx() + N - 1];
-    Distance const proposed = data.dist(V->client(), U->client())
-                              + uRoute->distBetween(U->idx(), U->idx() + N - 1)
-                              + data.dist(endU->client(), n(V)->client())
-                              + data.dist(p(U)->client(), n(endU)->client());
+    Distance proposed;
+    if (reversed)
+    {
+        proposed = data.dist(V->client(), endU->client())
+                   + uRoute->reversedDistBetween(U->idx(), U->idx() + N - 1)
+                   + data.dist(U->client(), n(V)->client())
+                   + data.dist(p(U)->client(), n(endU)->client());
+    }
+    else
+    {
+        proposed = data.dist(V->client(), U->client())
+                   + uRoute->distBetween(U->idx(), U->idx() + N - 1)
+                   + data.dist(endU->client(), n(V)->client())
+                   + data.dist(p(U)->client(), n(endU)->client());
+    }
 
     Cost deltaCost = static_cast<Cost>(proposed - current);
 
@@ -133,11 +151,13 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
         deltaCost
             -= costEvaluator.loadPenalty(vRoute->load(), vRoute->capacity());
 
-        auto vTWS = TimeWindowSegment::merge(
-            data.durationMatrix(),
-            vRoute->twsBefore(V->idx()),
-            uRoute->twsBetween(U->idx(), U->idx() + N - 1),
-            vRoute->twsAfter(V->idx() + 1));
+        auto const segmentTws
+            = reversed ? uRoute->reversedTwsBetween(U->idx(), U->idx() + N - 1)
+                       : uRoute->twsBetween(U->idx(), U->idx() + N - 1);
+        auto vTWS = TimeWindowSegment::merge(data.durationMatrix(),
+                                             vRoute->twsBefore(V->idx()),
+                                             segmentTws,
+                                             vRoute->twsAfter(V->idx() + 1));
 
         deltaCost += costEvaluator.twPenalty(vTWS.totalTimeWarp());
         deltaCost -= costEvaluator.twPenalty(vRoute->timeWarp());
@@ -149,13 +169,17 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
         if (deltaCost >= 0)
             return deltaCost;
 
+        auto const segmentTws
+            = reversed ? uRoute->reversedTwsBetween(U->idx(), U->idx() + N - 1)
+                       : uRoute->twsBetween(U->idx(), U->idx() + N - 1);
+
         if (U->idx() < V->idx())
         {
             auto const tws = TimeWindowSegment::merge(
                 data.durationMatrix(),
                 uRoute->twsBefore(U->idx() - 1),
                 uRoute->twsBetween(U->idx() + N, V->idx()),
-                uRoute->twsBetween(U->idx(), U->idx() + N - 1),
+                segmentTws,
                 uRoute->twsAfter(V->idx() + 1));
 
             deltaCost += costEvaluator.twPenalty(tws.totalTimeWarp());
@@ -165,7 +189,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
             auto const tws = TimeWindowSegment::merge(
                 data.durationMatrix(),
                 uRoute->twsBefore(V->idx()),
-                uRoute->twsBetween(U->idx(), U->idx() + N - 1),
+                segmentTws,
                 uRoute->twsBetween(V->idx() + 1, U->idx() - 1),
                 uRoute->twsAfter(U->idx() + N));
 
@@ -176,10 +200,9 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
     return deltaCost;
 }
 
-template <size_t N, size_t M>
-Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
-                                  Route::Node *V,
-                                  CostEvaluator const &costEvaluator) const
+template <size_t N, size_t M, bool reversed>
+Cost Exchange<N, M, reversed>::evalSwapMove(
+    Route::Node *U, Route::Node *V, CostEvaluator const &costEvaluator) const
 {
     assert(U->idx() > 0 && V->idx() > 0);
     assert(U->route() && V->route());
@@ -277,10 +300,10 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
     return deltaCost;
 }
 
-template <size_t N, size_t M>
-Cost Exchange<N, M>::evaluate(Route::Node *U,
-                              Route::Node *V,
-                              CostEvaluator const &costEvaluator)
+template <size_t N, size_t M, bool reversed>
+Cost Exchange<N, M, reversed>::evaluate(Route::Node *U,
+                                        Route::Node *V,
+                                        CostEvaluator const &costEvaluator)
 {
     if (containsDepot(U, N) || overlap(U, V))
         return 0;
@@ -309,18 +332,18 @@ Cost Exchange<N, M>::evaluate(Route::Node *U,
     }
 }
 
-template <size_t N, size_t M>
-void Exchange<N, M>::apply(Route::Node *U, Route::Node *V) const
+template <size_t N, size_t M, bool reversed>
+void Exchange<N, M, reversed>::apply(Route::Node *U, Route::Node *V) const
 {
     auto &uRoute = *U->route();
     auto &vRoute = *V->route();
-    auto *uToInsert = N == 1 ? U : uRoute[U->idx() + N - 1];
+    auto *uToInsert = (reversed || N == 1) ? U : uRoute[U->idx() + N - 1];
     auto *insertUAfter = M == 0 ? V : vRoute[V->idx() + M - 1];
 
     // Insert these 'extra' nodes of U after the end of V...
     for (size_t count = 0; count != N - M; ++count)
     {
-        auto *prev = p(uToInsert);
+        auto *prev = reversed ? n(uToInsert) : p(uToInsert);
         uRoute.remove(uToInsert->idx());
         vRoute.insert(insertUAfter->idx() + 1, uToInsert);
         uToInsert = prev;

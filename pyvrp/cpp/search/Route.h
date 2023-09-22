@@ -182,6 +182,12 @@ public:
                                                       size_t end) const;
 
     /**
+     * Calculates time window data for segment [start, end] after reversing it.
+     */
+    [[nodiscard]] inline TimeWindowSegment reversedTwsBetween(size_t start,
+                                                              size_t end) const;
+
+    /**
      * Returns time window data for segment [start, 0].
      */
     [[nodiscard]] inline TimeWindowSegment twsAfter(size_t start) const;
@@ -195,6 +201,12 @@ public:
      * Calculates the distance for segment [start, end].
      */
     [[nodiscard]] inline Distance distBetween(size_t start, size_t end) const;
+
+    /**
+     * Calculates the distance for segment [start, end] after reversing it.
+     */
+    [[nodiscard]] inline Distance reversedDistBetween(size_t start,
+                                                      size_t end) const;
 
     /**
      * Calculates the load for segment [start, end].
@@ -361,6 +373,19 @@ TimeWindowSegment Route::twsBetween(size_t start, size_t end) const
     return tws;
 }
 
+TimeWindowSegment Route::reversedTwsBetween(size_t start, size_t end) const
+{
+    using TWS = TimeWindowSegment;
+    assert(start <= end && end < nodes.size());
+
+    auto tws = stats[end].tws;
+
+    for (size_t step = end; step != start; --step)
+        tws = TWS::merge(data.durationMatrix(), tws, stats[step - 1].tws);
+
+    return tws;
+}
+
 TimeWindowSegment Route::twsAfter(size_t start) const
 {
     assert(start < nodes.size());
@@ -382,6 +407,17 @@ Distance Route::distBetween(size_t start, size_t end) const
 
     assert(startDist <= endDist);
     return endDist - startDist;
+}
+
+Distance Route::reversedDistBetween(size_t start, size_t end) const
+{
+    assert(start <= end && end < nodes.size());
+
+    Distance distance = 0;  // reversed dist of end -> end - 1 -> ... -> start
+    for (auto *node = nodes[end]; node != nodes[start]; node = p(node))
+        distance += data.dist(node->client(), p(node)->client());
+
+    return distance;
 }
 
 Load Route::loadBetween(size_t start, size_t end) const

@@ -19,16 +19,13 @@ Cost TwoOpt::evalWithinRoute(Route::Node *U,
     // Current situation is U -> n(U) -> ... -> V -> n(V). Proposed move is
     // U -> V -> p(V) -> ... -> n(U) -> n(V). This reverses the segment from
     // n(U) to V.
-    Distance segmentReversalDistance = 0;  // reversal dist of n(U) -> ... -> V
-    for (auto *node = V; node != n(U); node = p(node))
-        segmentReversalDistance += data.dist(node->client(), p(node)->client());
-
-    Distance const deltaDist = data.dist(U->client(), V->client())
-                               + data.dist(n(U)->client(), n(V)->client())
-                               + segmentReversalDistance
-                               - data.dist(U->client(), n(U)->client())
-                               - data.dist(V->client(), n(V)->client())
-                               - route->distBetween(U->idx() + 1, V->idx());
+    Distance const deltaDist
+        = data.dist(U->client(), V->client())
+          + data.dist(n(U)->client(), n(V)->client())
+          + route->reversedDistBetween(U->idx() + 1, V->idx())
+          - data.dist(U->client(), n(U)->client())
+          - data.dist(V->client(), n(V)->client())
+          - route->distBetween(U->idx() + 1, V->idx());
 
     Cost deltaCost = static_cast<Cost>(deltaDist);
 
