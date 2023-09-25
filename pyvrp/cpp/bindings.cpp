@@ -375,6 +375,12 @@ PYBIND11_MODULE(_pyvrp, m)
         .def("fixed_vehicle_cost",
              &Solution::fixedVehicleCost,
              DOC(pyvrp, Solution, fixedVehicleCost))
+        .def("distance_cost",
+             &Solution::distanceCost,
+             DOC(pyvrp, Solution, distanceCost))
+        .def("duration_cost",
+             &Solution::durationCost,
+             DOC(pyvrp, Solution, durationCost))
         .def("time_warp", &Solution::timeWarp, DOC(pyvrp, Solution, timeWarp))
         .def("prizes", &Solution::prizes, DOC(pyvrp, Solution, prizes))
         .def("uncollected_prizes",

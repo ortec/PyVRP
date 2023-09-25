@@ -401,23 +401,49 @@ def test_matrices_are_not_copies():
 
 
 @pytest.mark.parametrize(
-    ("capacity", "num_available", "fixed_cost", "tw_early", "tw_late"),
+    (
+        "capacity",
+        "num_available",
+        "fixed_cost",
+        "cost_per_distance",
+        "cost_per_duration",
+        "tw_early",
+        "tw_late",
+    ),
     [
-        (0, 0, 0, 0, 0),  # num_available must be positive
-        (-1, 1, 1, 0, 0),  # capacity cannot be negative
-        (-100, 1, 0, 0, 0),  # this is just wrong
-        (1, 1, -1, 0, 0),  # fixed_cost cannot be negative
-        (0, 1, -100, 0, 0),  # this is just wrong
-        (0, 1, 0, None, 0),  # both shift time windows must be given (if set)
-        (0, 1, 0, 0, None),  # both shift time windows must be given (if set)
-        (0, 1, 0, 1, 0),  # early > late
-        (0, 1, 0, -1, 0),  # negative early
+        (0, 0, 0, 1, 0, 0, 0),  # num_available must be positive
+        (-1, 1, 1, 1, 0, 0, 0),  # capacity cannot be negative
+        (-100, 1, 0, 1, 0, 0, 0),  # this is just wrong
+        (1, 1, -1, 1, 0, 0, 0),  # fixed_cost cannot be negative
+        (0, 1, -100, 1, 0, 0, 0),  # this is just wrong
+        (
+            0,
+            1,
+            0,
+            1,
+            0,
+            None,
+            0,
+        ),  # both shift time windows must be given (if set)
+        (
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            None,
+        ),  # both shift time windows must be given (if set)
+        (0, 1, 0, 1, 0, 1, 0),  # early > late
+        (0, 1, 0, 1, 0, -1, 0),  # negative early
     ],
 )
 def test_vehicle_type_raises_invalid_data(
     capacity: int,
     num_available: int,
     fixed_cost: int,
+    cost_per_distance: int,
+    cost_per_duration: int,
     tw_early: int,
     tw_late: int,
 ):
@@ -426,7 +452,15 @@ def test_vehicle_type_raises_invalid_data(
     arguments.
     """
     with assert_raises(ValueError):
-        VehicleType(capacity, num_available, fixed_cost, tw_early, tw_late)
+        VehicleType(
+            capacity,
+            num_available,
+            fixed_cost,
+            cost_per_distance,
+            cost_per_duration,
+            tw_early,
+            tw_late,
+        )
 
 
 def test_vehicle_type_does_not_raise_for_edge_cases():

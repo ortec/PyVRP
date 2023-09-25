@@ -14,9 +14,10 @@ namespace pyvrp
 template <typename T> concept CostEvaluatable = requires(T arg)
 {
     // clang-format off
-    { arg.distance() } -> std::same_as<Distance>;
     { arg.excessLoad() } -> std::same_as<Load>;
     { arg.fixedVehicleCost() }  -> std::same_as<Cost>;
+    { arg.distanceCost() }  -> std::same_as<Cost>;
+    { arg.durationCost() }  -> std::same_as<Cost>;
     { arg.timeWarp() } -> std::same_as<Duration>;
     { arg.uncollectedPrizes() } -> std::same_as<Cost>;
     { arg.isFeasible() } -> std::same_as<bool>;
@@ -41,6 +42,8 @@ template <typename T> concept CostEvaluatable = requires(T arg)
  *     Distance traveled in the route.
  * load
  *     Load carried in the route.
+ * duration
+ *     Duration of the route.
  * timeWarp
  *     Time warp for the route.
  *
@@ -140,18 +143,20 @@ public:
      * :math:`\mathcal{R}`. Each route :math:`R \in \mathcal{R}` is a sequence
      * of edges, starting and ending at the depot. A route :math:`R` has an
      * assigned vehicle type :math:`t_R`, which has a fixed vehicle cost
-     * :math:`f_{t_R}`. Let :math:`V_R = \{i : (i, j) \in R \}` be the set of
-     * locations visited by route :math:`R`. The objective value is then given
-     * by
+     * :math:`c^f_{t_R}`, a cost per distance travelled :math:`c^d_{t_R}` and
+     * a cost per unit of duration (time) :math:`c^t_{t_R}`. Let
+     * :math:`V_R = \{i : (i, j) \in R \}` be the set of locations visited by
+     * route :math:`R` and let T_R be the total duration (time) of the route.
+     * The objective value is then given by
      *
      * .. math::
      *
-     *    \sum_{R \in \mathcal{R}} \left[ f_{t_R}
-     *          + \sum_{(i, j) \in R} d_{ij} \right]
+     *    \sum_{R \in \mathcal{R}} \left[ f_{t_R} + c^t_{t_R} \cdot T_R
+     *          + \sum_{(i, j) \in R} c^d_{t_R} d_{ij} \right]
      *    + \sum_{i \in V} p_i - \sum_{R \in \mathcal{R}} \sum_{i \in V_R} p_i,
      *
-     * where the first part lists the vehicle and distance costs, and the
-     * second part the uncollected prizes of unvisited clients.
+     * where the first part lists the vehicle, distance and duration costs,
+     * and the second part the uncollected prizes of unvisited clients.
      *
      * .. note::
      *
@@ -195,8 +200,9 @@ Cost CostEvaluator::penalisedCost(T const &arg) const
     // Standard objective plus penalty terms for capacity- and time-related
     // infeasibilities.
     // clang-format off
-    return static_cast<Cost>(arg.distance())
-           + arg.fixedVehicleCost()
+    return arg.fixedVehicleCost()
+           + arg.distanceCost()
+           + arg.durationCost()
            + arg.uncollectedPrizes()
            + loadPenaltyExcess(arg.excessLoad())
            + twPenalty(arg.timeWarp());

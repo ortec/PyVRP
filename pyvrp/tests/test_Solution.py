@@ -836,6 +836,54 @@ def test_fixed_vehicle_cost(
 
 
 @mark.parametrize(
+    ("assignment", "expected"), [((0, 0), 0), ((0, 1), 4224), ((1, 2), 13949)]
+)
+def test_distance_cost(ok_small, assignment: Tuple[int, int], expected: int):
+    """
+    Tests that the solution tracks the total fixed vehicle costs of the
+    vehicles used for its routes.
+    """
+    # First vehicle type is free, second costs 10 per vehicle. The solution
+    # should be able to track this.
+    data = ok_small.replace(
+        vehicle_types=[
+            VehicleType(10, 2, cost_per_distance=0),
+            VehicleType(10, 2, cost_per_distance=1),
+            VehicleType(10, 2, cost_per_distance=2),
+        ]
+    )
+
+    routes = [
+        Route(data, [1, 2], assignment[0]),  # distance 5501
+        Route(data, [3, 4], assignment[1]),  # distance 4224
+    ]
+
+    sol = Solution(data, routes)
+    assert_allclose(sol.distance_cost(), expected)
+
+
+@mark.parametrize(
+    ("assignment", "expected"), [((0, 0), 0), ((0, 1), 6779), ((1, 2), 19372)]
+)
+def test_duration_cost(assignment: Tuple[int, int], expected: int):
+    data = read("data/OkSmallWaitTime.txt")
+    data = data.replace(
+        vehicle_types=[
+            VehicleType(10, 2, cost_per_duration=0),
+            VehicleType(10, 2, cost_per_duration=1),
+            VehicleType(10, 2, cost_per_duration=2),
+        ]
+    )
+    routes = [
+        Route(data, [1, 3], assignment[0]),  # travel + wait + service = 5814
+        Route(data, [2, 4], assignment[1]),  # travel + wait + service = 6779
+    ]
+
+    sol = Solution(data, routes)
+    assert_allclose(sol.duration_cost(), expected)
+
+
+@mark.parametrize(
     ("tw_early", "tw_late", "expected"),
     [
         (0, 0, 20_277),  # cannot be back at the depot before 20'277

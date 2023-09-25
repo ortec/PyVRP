@@ -218,6 +218,8 @@ private:
     Distance distance_ = 0;         // Total distance
     Load excessLoad_ = 0;           // Total excess load over all routes
     Cost fixedVehicleCost_ = 0;     // Fixed cost of all used vehicles
+    Cost distanceCost_ = 0;         // Cost for travelled distance of routes
+    Cost durationCost_ = 0;         // Cost for total duration of routes
     Cost prizes_ = 0;               // Total collected prize value
     Cost uncollectedPrizes_ = 0;    // Total uncollected prize value
     Duration timeWarp_ = 0;         // Total time warp over all routes
@@ -365,6 +367,28 @@ public:
      *     Total fixed vehicle cost.
      */
     [[nodiscard]] Cost fixedVehicleCost() const;
+
+    /**
+     * Returns the cost associated with the route distance for all routes in
+     * this solution.
+     *
+     * Returns
+     * -------
+     * int
+     *     Total route distance cost.
+     */
+    [[nodiscard]] Cost distanceCost() const;
+
+    /**
+     * Returns the cost associated with the duration for all routes in this
+     * solution.
+     *
+     * Returns
+     * -------
+     * int
+     *     Total route duration cost.
+     */
+    [[nodiscard]] Cost durationCost() const;
 
     /**
      * Returns the total collected prize value over all routes.

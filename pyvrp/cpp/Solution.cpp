@@ -26,12 +26,17 @@ void Solution::evaluate(ProblemData const &data)
     for (auto const &route : routes_)
     {
         // Whole solution statistics.
+        auto const &vehicleType = data.vehicleType(route.vehicleType());
         numClients_ += route.size();
         prizes_ += route.prizes();
         distance_ += route.distance();
         timeWarp_ += route.timeWarp();
         excessLoad_ += route.excessLoad();
-        fixedVehicleCost_ += data.vehicleType(route.vehicleType()).fixedCost;
+        fixedVehicleCost_ += vehicleType.fixedCost;
+        distanceCost_ += vehicleType.costPerDistance
+                         * static_cast<Cost>(route.distance());
+        durationCost_ += vehicleType.costPerDuration
+                         * static_cast<Cost>(route.duration());
     }
 
     uncollectedPrizes_ = allPrizes - prizes_;
@@ -63,6 +68,10 @@ Distance Solution::distance() const { return distance_; }
 Load Solution::excessLoad() const { return excessLoad_; }
 
 Cost Solution::fixedVehicleCost() const { return fixedVehicleCost_; }
+
+Cost Solution::distanceCost() const { return distanceCost_; }
+
+Cost Solution::durationCost() const { return durationCost_; }
 
 Cost Solution::prizes() const { return prizes_; }
 

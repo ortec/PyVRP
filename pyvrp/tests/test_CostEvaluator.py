@@ -170,7 +170,9 @@ def test_route_penalised_cost(ok_small):
     penalty_tw = 6
     cost_evaluator = CostEvaluator(penalty_capacity, penalty_tw)
 
-    route_data = RouteData(size=1, distance=10, load=5, time_warp=0)
+    route_data = RouteData(
+        size=1, distance=10, load=5, duration=0, time_warp=0
+    )
     vehicle_type = VehicleType(10, 1, 100)
 
     # No load violations and time warp, so we should have just fixed cost
@@ -178,7 +180,9 @@ def test_route_penalised_cost(ok_small):
     cost = cost_evaluator.penalised_cost(route_data, vehicle_type)
     assert_allclose(cost, 110)
 
-    route_data = RouteData(size=1, distance=10, load=5, time_warp=20)
+    route_data = RouteData(
+        size=1, distance=10, load=5, duration=0, time_warp=20
+    )
     vehicle_type = VehicleType(3, 1, 100)
     # Now we should incur load penalty 20 * (5-3) = 40 and timewarp penalty
     # 6 * 20 = 120, beyond the fixed and distance cost so 110 + 40 + 120 = 270
@@ -186,7 +190,7 @@ def test_route_penalised_cost(ok_small):
     assert_allclose(cost, 270)
 
     # Test empty route
-    route_data = RouteData(size=0, distance=0, load=0, time_warp=0)
+    route_data = RouteData(size=0, distance=0, load=0, duration=0, time_warp=0)
     cost = cost_evaluator.penalised_cost(route_data, vehicle_type)
     assert_allclose(cost, 0)
 
@@ -223,3 +227,42 @@ def test_cost_with_fixed_vehicle_cost(
     assert_(sol.is_feasible())
     assert_allclose(cost_eval.cost(sol), sol.distance() + expected)
     assert_allclose(cost_eval.penalised_cost(sol), sol.distance() + expected)
+
+
+@mark.parametrize(
+    ("assignment", "expected"),
+    [((0, 0), 32175), ((0, 1), 50641), ((1, 1), 74095)],
+)
+def test_cost_with_heterogeneous_vehicle_cost(
+    ok_small, assignment: Tuple[int, int], expected: int
+):
+    """
+    Tests that the cost evaluator counts the fixed cost when determining the
+    objective value of a solution.
+    """
+    # First vehicle type is free, second costs 10 per vehicle. The solution
+    # should be able to track this.
+    data = ok_small.replace(
+        vehicle_types=[
+            VehicleType(
+                10, 2, fixed_cost=0, cost_per_distance=1, cost_per_duration=2
+            ),
+            VehicleType(
+                10, 2, fixed_cost=10, cost_per_distance=3, cost_per_duration=4
+            ),
+        ]
+    )
+
+    routes = [
+        Route(data, [1, 2], assignment[0]),  # distance 5501, duration 6221
+        Route(data, [3, 4], assignment[1]),  # distance 4224, duration 5004
+    ]
+
+    sol = Solution(data, routes)
+    cost_eval = CostEvaluator(1, 1)
+
+    # Solution is feasible, so penalised cost and regular cost are equal. Both
+    # should contain the fixed vehicle cost, distance cost and duration cost.
+    assert_(sol.is_feasible())
+    assert_allclose(cost_eval.cost(sol), expected)
+    assert_allclose(cost_eval.penalised_cost(sol), expected)
