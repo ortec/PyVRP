@@ -88,17 +88,25 @@ PYBIND11_MODULE(_pyvrp, m)
         .def(py::init<pyvrp::Load,
                       size_t,
                       pyvrp::Cost,
+                      pyvrp::Cost,
+                      pyvrp::Cost,
                       std::optional<pyvrp::Duration>,
                       std::optional<pyvrp::Duration>>(),
              py::arg("capacity"),
              py::arg("num_available"),
              py::arg("fixed_cost") = 0,
+             py::arg("cost_per_distance") = 1,
+             py::arg("cost_per_duration") = 0,
              py::arg("tw_early") = py::none(),
              py::arg("tw_late") = py::none())
         .def_readonly("capacity", &ProblemData::VehicleType::capacity)
         .def_readonly("num_available", &ProblemData::VehicleType::numAvailable)
         .def_readonly("depot", &ProblemData::VehicleType::depot)
         .def_readonly("fixed_cost", &ProblemData::VehicleType::fixedCost)
+        .def_readonly("cost_per_distance",
+                      &ProblemData::VehicleType::costPerDistance)
+        .def_readonly("cost_per_duration",
+                      &ProblemData::VehicleType::costPerDuration)
         .def_readonly("tw_early", &ProblemData::VehicleType::twEarly)
         .def_readonly("tw_late", &ProblemData::VehicleType::twLate);
 
@@ -420,14 +428,20 @@ PYBIND11_MODULE(_pyvrp, m)
         });
 
     py::class_<RouteData>(m, "RouteData")
-        .def(py::init<size_t, pyvrp::Distance, pyvrp::Load, pyvrp::Duration>(),
+        .def(py::init<size_t,
+                      pyvrp::Distance,
+                      pyvrp::Load,
+                      pyvrp::Duration,
+                      pyvrp::Duration>(),
              py::arg("size"),
              py::arg("distance"),
              py::arg("load"),
+             py::arg("duration"),
              py::arg("time_warp"))
         .def_readwrite("size", &RouteData::size)
         .def_readwrite("distance", &RouteData::distance)
         .def_readwrite("load", &RouteData::load)
+        .def_readwrite("duration", &RouteData::duration)
         .def_readwrite("time_warp", &RouteData::timeWarp);
 
     py::class_<CostEvaluator>(m, "CostEvaluator", DOC(pyvrp, CostEvaluator))

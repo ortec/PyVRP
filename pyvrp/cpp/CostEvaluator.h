@@ -52,6 +52,8 @@ template <typename T> concept CostEvaluatable = requires(T arg)
  *     Distance traveled in the route.
  * load
  *     Load carried in the route.
+ * duration
+ *     Duration of the route.
  * timeWarp
  *     Time warp for the route.
  */
@@ -60,10 +62,19 @@ struct RouteData
     size_t size;
     Distance distance;
     Load load;
+    Duration duration;
     Duration timeWarp;
 
-    RouteData(size_t size, Distance distance, Load load, Duration timeWarp)
-        : size(size), distance(distance), load(load), timeWarp(timeWarp)
+    RouteData(size_t size,
+              Distance distance,
+              Load load,
+              Duration duration,
+              Duration timeWarp)
+        : size(size),
+          distance(distance),
+          load(load),
+          duration(duration),
+          timeWarp(timeWarp)
     {
     }
 };
@@ -206,11 +217,14 @@ Cost CostEvaluator::penalisedCost(
 {
     auto const isUsed = routeData.size > 0;
     auto const fixedCost = static_cast<Cost>(isUsed) * vehicleType.fixedCost;
-    auto const distanceCost = static_cast<Cost>(routeData.distance);
+    auto const distanceCost
+        = static_cast<Cost>(routeData.distance) * vehicleType.costPerDistance;
+    auto const durationCost
+        = static_cast<Cost>(routeData.duration) * vehicleType.costPerDuration;
     auto const loadPen = loadPenalty(routeData.load, vehicleType.capacity);
     auto const twPen = twPenalty(routeData.timeWarp);
 
-    return fixedCost + distanceCost + loadPen + twPen;
+    return fixedCost + distanceCost + durationCost + loadPen + twPen;
 }
 }  // namespace pyvrp
 

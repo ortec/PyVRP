@@ -26,7 +26,7 @@ void SwapStar::updateRemovalCosts(Route *R1, CostEvaluator const &costEvaluator)
         // Note: we don't account for size (fixed cost) and load (penalty) of
         // the route, since another node will be replaced
         RouteData const routeData(
-            R1->size(), dist, R1->load(), tws.totalTimeWarp());
+            R1->size(), dist, R1->load(), tws.duration(), tws.totalTimeWarp());
         auto const cost = costEvaluator.penalisedCost(routeData, vehicleType);
         removalCosts(R1->idx(), U->client()) = cost - currentCost;
     }
@@ -58,7 +58,7 @@ void SwapStar::updateInsertionCost(Route *R,
                           - data.dist(V->client(), n(V)->client());
 
         RouteData const routeData(
-            R->size(), dist, R->load(), tws.totalTimeWarp());
+            R->size(), dist, R->load(), tws.duration(), tws.totalTimeWarp());
         auto const cost = costEvaluator.penalisedCost(routeData, vehicleType);
 
         insertPositions.maybeAdd(cost - currentCost, V);
@@ -90,8 +90,11 @@ std::pair<Cost, Route::Node *> SwapStar::getBestInsertPoint(
                           + data.dist(U->client(), n(V)->client())
                           - data.dist(p(V)->client(), n(V)->client());
 
-    RouteData const routeData(
-        V->route()->size(), dist, V->route()->load(), tws.totalTimeWarp());
+    RouteData const routeData(V->route()->size(),
+                              dist,
+                              V->route()->load(),
+                              tws.duration(),
+                              tws.totalTimeWarp());
     auto const cost = costEvaluator.penalisedCost(routeData, vehicleType);
 
     return std::make_pair(cost - currentCost, p(V));
@@ -128,7 +131,7 @@ Cost SwapStar::evaluateMove(Route::Node *U,
                                     route->twsAfter(V->idx() + 2));
 
         RouteData const routeData(
-            route->size(), dist, load, tws.totalTimeWarp());
+            route->size(), dist, load, tws.duration(), tws.totalTimeWarp());
         auto const cost = costEvaluator.penalisedCost(routeData, vehicleType);
 
         return cost - currentCost;
@@ -162,7 +165,7 @@ Cost SwapStar::evaluateMove(Route::Node *U,
                              route->twsAfter(remove->idx() + 1));
 
             RouteData const routeData(
-                route->size(), dist, load, tws.totalTimeWarp());
+                route->size(), dist, load, tws.duration(), tws.totalTimeWarp());
             auto const cost
                 = costEvaluator.penalisedCost(routeData, vehicleType);
 
@@ -178,7 +181,7 @@ Cost SwapStar::evaluateMove(Route::Node *U,
                              route->twsAfter(V->idx() + 1));
 
             RouteData const routeData(
-                route->size(), dist, load, tws.totalTimeWarp());
+                route->size(), dist, load, tws.duration(), tws.totalTimeWarp());
             auto const cost
                 = costEvaluator.penalisedCost(routeData, vehicleType);
 

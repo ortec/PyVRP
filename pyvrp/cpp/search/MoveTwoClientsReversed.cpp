@@ -38,11 +38,13 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
         RouteData uRouteData(uRoute->size() - 2,
                              uRoute->distance() + deltaDistU,
                              uRoute->load() - deltaLoad,
+                             0,
                              0);
 
         RouteData vRouteData(vRoute->size() + 2,
                              vRoute->distance() + deltaDistV,
                              vRoute->load() + deltaLoad,
+                             0,
                              0);
 
         auto const lbCostU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
@@ -56,6 +58,7 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
                                uRoute->twsBefore(U->idx() - 1),
                                uRoute->twsAfter(U->idx() + 2));
         uRouteData.timeWarp = uTWS.totalTimeWarp();
+        uRouteData.duration = uTWS.duration();
         auto const costU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
 
         // Small optimization, check intermediate bound
@@ -69,6 +72,7 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
                                uRoute->tws(U->idx()),
                                vRoute->twsAfter(V->idx() + 1));
         vRouteData.timeWarp = vTWS.totalTimeWarp();
+        vRouteData.duration = vTWS.duration();
         auto const costV = costEvaluator.penalisedCost(vRouteData, vehTypeV);
 
         return costU + costV - currentCost;
@@ -81,6 +85,7 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
         RouteData routeData(uRoute->size(),
                             uRoute->distance() + deltaDistU + deltaDistV,
                             uRoute->load(),
+                            0,
                             0);
 
         if (costEvaluator.penalisedCost(routeData, vehTypeU) >= currentCost)
@@ -96,6 +101,7 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
                              uRoute->tws(U->idx()),
                              uRoute->twsAfter(V->idx() + 1));
             routeData.timeWarp = uTWS.totalTimeWarp();
+            routeData.duration = uTWS.duration();
         }
         else
         {
@@ -107,6 +113,7 @@ pyvrp::Cost MoveTwoClientsReversed::evaluate(
                              uRoute->twsBetween(V->idx() + 1, U->idx() - 1),
                              uRoute->twsAfter(U->idx() + 2));
             routeData.timeWarp = uTWS.totalTimeWarp();
+            routeData.duration = uTWS.duration();
         }
         return costEvaluator.penalisedCost(routeData, vehTypeU) - currentCost;
     }

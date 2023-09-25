@@ -130,6 +130,8 @@ def test_add_vehicle_type():
         num_available=10,
         capacity=998,
         fixed_cost=1_001,
+        cost_per_distance=2,
+        cost_per_duration=3,
         tw_early=17,
         tw_late=19,
     )
@@ -137,6 +139,8 @@ def test_add_vehicle_type():
     assert_equal(vehicle_type.num_available, 10)
     assert_allclose(vehicle_type.capacity, 998)
     assert_allclose(vehicle_type.fixed_cost, 1_001)
+    assert_allclose(vehicle_type.cost_per_distance, 2)
+    assert_allclose(vehicle_type.cost_per_duration, 3)
     assert_allclose(vehicle_type.tw_early, 17)
     assert_allclose(vehicle_type.tw_late, 19)
 

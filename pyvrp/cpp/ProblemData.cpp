@@ -45,11 +45,15 @@ ProblemData::Client::Client(Coordinate x,
 ProblemData::VehicleType::VehicleType(Load capacity,
                                       size_t numAvailable,
                                       Cost fixedCost,
+                                      Cost costPerDistance,
+                                      Cost costPerDuration,
                                       std::optional<Duration> twEarly,
                                       std::optional<Duration> twLate)
     : capacity(capacity),
       numAvailable(numAvailable),
       fixedCost(fixedCost),
+      costPerDistance(costPerDistance),
+      costPerDuration(costPerDuration),
       twEarly(twEarly),
       twLate(twLate)
 {
@@ -61,6 +65,12 @@ ProblemData::VehicleType::VehicleType(Load capacity,
 
     if (fixedCost < 0)
         throw std::invalid_argument("fixed_cost must be >= 0.");
+
+    if (costPerDistance < 0)
+        throw std::invalid_argument("cost_per_distance must be >= 0.");
+
+    if (costPerDuration < 0)
+        throw std::invalid_argument("cost_per_duration must be >= 0.");
 
     if ((twEarly && !twLate) || (!twEarly && twLate))
         throw std::invalid_argument("Must pass either no shift time window,"

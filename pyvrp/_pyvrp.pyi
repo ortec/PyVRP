@@ -6,10 +6,16 @@ class RouteData:
     size: int
     distance: int
     load: int
+    duration: int
     timeWarp: int
 
     def __init__(
-        self, size: int, distance: int, load: int, time_warp: int
+        self,
+        size: int,
+        distance: int,
+        load: int,
+        duration: int,
+        time_warp: int,
     ) -> None: ...
 
 class CostEvaluator:
@@ -66,6 +72,8 @@ class VehicleType:
     num_available: int
     depot: int
     fixed_cost: int
+    cost_per_distance: int
+    cost_per_duration: int
     tw_early: Optional[int]
     tw_late: Optional[int]
     def __init__(
@@ -73,6 +81,8 @@ class VehicleType:
         capacity: int,
         num_available: int,
         fixed_cost: int = 0,
+        cost_per_distance: int = 1,
+        cost_per_duration: int = 0,
         tw_early: Optional[int] = None,
         tw_late: Optional[int] = None,
     ) -> None: ...

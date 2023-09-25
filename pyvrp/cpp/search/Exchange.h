@@ -113,11 +113,13 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
         RouteData uRouteData(uRoute->size() - N,
                              uRoute->distance() + deltaDistU,
                              uRoute->load() - deltaLoad,
+                             0,
                              0);
 
         RouteData vRouteData(vRoute->size() + N,
                              vRoute->distance() + deltaDistV,
                              vRoute->load() + deltaLoad,
+                             0,
                              0);
 
         auto const lbCostU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
@@ -131,6 +133,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
                                              uRoute->twsBefore(U->idx() - 1),
                                              uRoute->twsAfter(U->idx() + N));
         uRouteData.timeWarp = uTWS.totalTimeWarp();
+        uRouteData.duration = uTWS.duration();
         auto const costU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
 
         // Small optimization, check intermediate bound
@@ -143,6 +146,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
             uRoute->twsBetween(U->idx(), U->idx() + N - 1),
             vRoute->twsAfter(V->idx() + 1));
         vRouteData.timeWarp = vTWS.totalTimeWarp();
+        vRouteData.duration = vTWS.duration();
         auto const costV = costEvaluator.penalisedCost(vRouteData, vehTypeV);
 
         return costU + costV - currentCost;
@@ -155,6 +159,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
         RouteData routeData(uRoute->size(),
                             uRoute->distance() + deltaDistU + deltaDistV,
                             uRoute->load(),
+                            0,
                             0);
 
         if (costEvaluator.penalisedCost(routeData, vehTypeU) >= currentCost)
@@ -170,6 +175,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
                 uRoute->twsBetween(U->idx(), U->idx() + N - 1),
                 uRoute->twsAfter(V->idx() + 1));
             routeData.timeWarp = tws.totalTimeWarp();
+            routeData.duration = tws.duration();
         }
         else
         {
@@ -180,6 +186,7 @@ Cost Exchange<N, M>::evalRelocateMove(Route::Node *U,
                 uRoute->twsBetween(V->idx() + 1, U->idx() - 1),
                 uRoute->twsAfter(U->idx() + N));
             routeData.timeWarp = tws.totalTimeWarp();
+            routeData.duration = tws.duration();
         }
         return costEvaluator.penalisedCost(routeData, vehTypeU) - currentCost;
     }
@@ -229,11 +236,13 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
         RouteData uRouteData(uRoute->size() - N + M,
                              uRoute->distance() + deltaDistU,
                              uRoute->load() - deltaLoad,
+                             0,
                              0);
 
         RouteData vRouteData(vRoute->size() + N - M,
                              vRoute->distance() + deltaDistV,
                              vRoute->load() + deltaLoad,
+                             0,
                              0);
 
         auto const lbCostU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
@@ -249,6 +258,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             vRoute->twsBetween(V->idx(), V->idx() + M - 1),
             uRoute->twsAfter(U->idx() + N));
         uRouteData.timeWarp = uTWS.totalTimeWarp();
+        uRouteData.duration = uTWS.duration();
         auto const costU = costEvaluator.penalisedCost(uRouteData, vehTypeU);
 
         // Small optimization, check intermediate bound
@@ -262,6 +272,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
             uRoute->twsBetween(U->idx(), U->idx() + N - 1),
             vRoute->twsAfter(V->idx() + M));
         vRouteData.timeWarp = vTWS.totalTimeWarp();
+        vRouteData.duration = vTWS.duration();
         auto const costV = costEvaluator.penalisedCost(vRouteData, vehTypeV);
 
         return costU + costV - currentCost;
@@ -274,6 +285,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
         RouteData routeData(uRoute->size(),
                             uRoute->distance() + deltaDistU + deltaDistV,
                             uRoute->load(),
+                            0,
                             0);
 
         if (costEvaluator.penalisedCost(routeData, vehTypeU) >= currentCost)
@@ -289,6 +301,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
                 uRoute->twsBetween(U->idx(), U->idx() + N - 1),
                 uRoute->twsAfter(V->idx() + M));
             routeData.timeWarp = tws.totalTimeWarp();
+            routeData.duration = tws.duration();
         }
         else
         {
@@ -300,6 +313,7 @@ Cost Exchange<N, M>::evalSwapMove(Route::Node *U,
                 uRoute->twsBetween(V->idx(), V->idx() + M - 1),
                 uRoute->twsAfter(U->idx() + N));
             routeData.timeWarp = tws.totalTimeWarp();
+            routeData.duration = tws.duration();
         }
         return costEvaluator.penalisedCost(routeData, vehTypeU) - currentCost;
     }

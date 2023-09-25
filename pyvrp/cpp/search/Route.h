@@ -157,6 +157,11 @@ public:
     [[nodiscard]] inline Distance distance() const;
 
     /**
+     * @return Total duration of this route.
+     */
+    [[nodiscard]] inline Duration duration() const;
+
+    /**
      * @return Total time warp on this route.
      */
     [[nodiscard]] inline Duration timeWarp() const;
@@ -336,6 +341,8 @@ Cost Route::fixedCost() const { return vehicleType_.fixedCost; }
 
 Distance Route::distance() const { return stats.back().cumDist; }
 
+Duration Route::duration() const { return stats.back().twsBefore.duration(); }
+
 Duration Route::timeWarp() const
 {
     return stats.back().twsBefore.totalTimeWarp();
@@ -405,7 +412,8 @@ Load Route::loadBetween(size_t start, size_t end) const
 
 Cost Route::penalisedCost(CostEvaluator const &costEvaluator) const
 {
-    RouteData const routeData = {size(), distance(), load(), timeWarp()};
+    RouteData const routeData
+        = {size(), distance(), load(), duration(), timeWarp()};
     return costEvaluator.penalisedCost(routeData, vehicleType_);
 }
 }  // namespace pyvrp::search

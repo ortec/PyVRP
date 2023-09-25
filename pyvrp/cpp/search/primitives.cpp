@@ -29,6 +29,7 @@ Cost pyvrp::search::insertCost(Route::Node *U,
     RouteData const routeData(route->size() + 1,
                               route->distance() + deltaDist,
                               route->load() + client.demand,
+                              vTWS.duration(),
                               vTWS.totalTimeWarp());
     auto const cost = costEvaluator.penalisedCost(
         routeData, data.vehicleType(route->vehicleType()));
@@ -56,6 +57,7 @@ Cost pyvrp::search::removeCost(Route::Node *U,
     RouteData const routeData(route->size() - 1,
                               route->distance() + deltaDist,
                               route->load() - client.demand,
+                              uTWS.duration(),
                               uTWS.totalTimeWarp());
     auto const cost = costEvaluator.penalisedCost(
         routeData, data.vehicleType(route->vehicleType()));

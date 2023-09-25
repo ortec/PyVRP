@@ -197,6 +197,8 @@ class Model:
         capacity: int,
         num_available: int,
         fixed_cost: int = 0,
+        cost_per_distance: int = 1,
+        cost_per_duration: int = 0,
         tw_early: Optional[int] = None,
         tw_late: Optional[int] = None,
     ) -> VehicleType:
@@ -205,7 +207,13 @@ class Model:
         created vehicle type.
         """
         vehicle_type = VehicleType(
-            capacity, num_available, fixed_cost, tw_early, tw_late
+            capacity,
+            num_available,
+            fixed_cost,
+            cost_per_distance,
+            cost_per_duration,
+            tw_early,
+            tw_late,
         )
 
         self._vehicle_types.append(vehicle_type)

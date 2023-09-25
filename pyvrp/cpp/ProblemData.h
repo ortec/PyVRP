@@ -113,6 +113,8 @@ public:
      *     capacity: int,
      *     num_available: int,
      *     fixed_cost: int = 0,
+     *     cost_per_distance: int = 1,
+     *     cost_per_duration: int = 0,
      *     tw_early: Optional[int] = None,
      *     tw_late: Optional[int] = None,
      * )
@@ -134,6 +136,10 @@ public:
      *     Number of vehicles of this type that are available. Must be positive.
      * fixed_cost
      *     Fixed cost of using a vehicle of this type. Default 0.
+     * cost_per_distance
+     *     Cost per unit of distance for a vehicle of this type (default 1).
+     * cost_per_duration
+     *     Cost per unit of duration for a vehicle of this type (default 0).
      * tw_early
      *     Start of the vehicle type's shift. Defaults to the depot's opening
      *     time if not given.
@@ -151,6 +157,10 @@ public:
      *     Depot associated with these vehicles.
      * fixed_cost
      *     Fixed cost of using a vehicle of this type.
+     * cost_per_distance
+     *     Cost per unit of distance for a vehicle of this type.
+     * cost_per_duration
+     *     Cost per unit of duration for a vehicle of this type.
      * tw_early
      *     Start of the vehicle type's shift, if specified.
      * tw_late
@@ -158,16 +168,20 @@ public:
      */
     struct VehicleType
     {
-        Load const capacity;        // This type's vehicle capacity
-        size_t const numAvailable;  // Available vehicles of this type
-        size_t const depot = 0;     // Departure and return depot location
-        Cost const fixedCost;       // Fixed cost of using this vehicle type
+        Load const capacity;         // This type's vehicle capacity
+        size_t const numAvailable;   // Available vehicles of this type
+        size_t const depot = 0;      // Departure and return depot location
+        Cost const fixedCost;        // Fixed cost of using this vehicle type
+        Cost const costPerDistance;  // Cost per distance unit
+        Cost const costPerDuration;  // Cost per duration unit
         std::optional<Duration> const twEarly;  // Start of shift
         std::optional<Duration> const twLate;   // End of shift
 
         VehicleType(Load capacity,
                     size_t numAvailable,
                     Cost fixedCost = 0,
+                    Cost costPerDistance = 1,
+                    Cost costPerDuration = 0,
                     std::optional<Duration> twEarly = std::nullopt,
                     std::optional<Duration> twLate = std::nullopt);
     };
