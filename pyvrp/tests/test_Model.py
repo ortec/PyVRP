@@ -425,3 +425,45 @@ def test_model_solves_small_instance_with_shift_durations():
     res = m.solve(stop=MaxIterations(100))
     assert_(res.is_feasible())
     assert_(res.best.num_routes() > 2)
+
+
+def test_model_respects_fixed_vehicle_types():
+    """
+    High-level test that creates and solves a small instance with some fixed
+    vehicle type constraints to see if they are respected.
+    """
+    m = Model()
+
+    # There are two vehicle types, each with two vehicle. In principle, all
+    # clients could be served by two vehicles of the same type, but due to
+    # fixed_vehicle_type restrictions, we should use both vehicle types.
+    for _ in range(2):
+        m.add_vehicle_type(capacity=3, num_available=2)
+
+    m.add_depot(x=0, y=0)
+
+    for idx in range(5):
+        # Vehicles of the first type can visit two clients before having to
+        # return to the depot. The second vehicle type can be used to visit
+        # a single client before having to return to the depot. So we need
+        # at least three routes.
+        m.add_client(
+            x=idx,
+            y=idx,
+            demand=1,
+            fixed_vehicle_type=m.vehicle_types[idx % 2],
+        )
+
+    for frm in m.locations:
+        for to in m.locations:
+            m.add_edge(frm, to, distance=5)
+
+    res = m.solve(stop=MaxIterations(100))
+    assert_(res.is_feasible())
+    assert_(res.best.num_routes() > 2)
+
+    for route in res.best.get_routes():
+        for c in route:
+            assert_equal(
+                m.locations[c].fixed_vehicle_type, route.vehicle_type()
+            )
