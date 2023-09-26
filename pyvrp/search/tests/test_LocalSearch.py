@@ -445,3 +445,44 @@ def test_local_search_does_not_remove_required_clients():
     sol_cost = cost_eval.penalised_cost(sol)
     new_cost = cost_eval.penalised_cost(new_sol)
     assert_(new_cost < sol_cost)
+
+
+def test_local_search_solution_completion_fixed_vehicle_types(ok_small_prizes):
+    """
+    Tests that the local search object improve solutions that are incomplete,
+    and returns a completed solution that respects clients fixed to certain
+    vehicle types. Passing an incomplete solution should
+    return a completed solution after search where clients are assigned to the
+    correct vehicle type.
+    """
+    data = ok_small_prizes.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                required=True,
+                fixed_vehicle_type=i % 2,
+            )
+            for i, client in enumerate(ok_small_prizes.clients())
+        ],
+        vehicle_types=[VehicleType(10, 1), VehicleType(5, 1)],
+    )
+
+    rng = RandomNumberGenerator(seed=42)
+
+    ls = LocalSearch(data, rng, compute_neighbours(data))
+    ls.add_node_operator(Exchange10(data))
+
+    cost_eval = CostEvaluator(1, 1)
+    sol = Solution(data, [])
+    assert_(not sol.is_complete())  # 1 is required but not visited
+
+    new_sol = ls.search(sol, cost_eval)
+    assert_(new_sol.is_complete())
+
+    for route in new_sol.get_routes():
+        for c in route:
+            assert_equal(
+                data.location(c).fixed_vehicle_type, route.vehicle_type()
+            )

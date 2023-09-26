@@ -238,16 +238,31 @@ void LocalSearch::applyOptionalClientMoves(Route::Node *U,
     // improving move. Note that we always insert required clients.
     if (!U->route())
     {
-        // We take this as a default value in case none of the client's
-        // neighbours are assigned, yet U is required.
+        // We take the first client from the first route (or first route that
+        // has the desired fixed vehicle type) as a default value in case none
+        // of the client's neighbours are assigned to a route (of the fixed
+        // vehicle type), yet U is required.
         Route::Node *UAfter = routes[0][0];
+        if (uData.fixedVehicleType.has_value())
+        {
+            auto pred = [&uData](auto const &route) {
+                return route.vehicleType() == uData.fixedVehicleType;
+            };
+            auto first = std::find_if(routes.begin(), routes.end(), pred);
+            UAfter = (*first)[0];
+        }
+
         Cost bestCost = insertCost(U, UAfter, data, costEvaluator);
 
         for (auto const vClient : neighbours[uClient])
         {
             auto *V = &nodes[vClient];
 
-            if (!V->route())
+            // Skip option if V is not assigned or assigned to a route that is
+            // not the (optional) fixed vehicle type for U.
+            if (!V->route()
+                || (uData.fixedVehicleType
+                    && V->route()->vehicleType() != uData.fixedVehicleType))
                 continue;
 
             auto cost = insertCost(U, V, data, costEvaluator);
