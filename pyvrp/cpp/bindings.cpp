@@ -369,6 +369,7 @@ PYBIND11_MODULE(_pyvrp, m)
              &Solution::hasTimeWarp,
              DOC(pyvrp, Solution, hasTimeWarp))
         .def("distance", &Solution::distance, DOC(pyvrp, Solution, distance))
+        .def("duration", &Solution::duration, DOC(pyvrp, Solution, duration))
         .def("excess_load",
              &Solution::excessLoad,
              DOC(pyvrp, Solution, excessLoad))

@@ -30,6 +30,7 @@ void Solution::evaluate(ProblemData const &data)
         numClients_ += route.size();
         prizes_ += route.prizes();
         distance_ += route.distance();
+        duration_ += route.duration();
         timeWarp_ += route.timeWarp();
         excessLoad_ += route.excessLoad();
         fixedVehicleCost_ += vehicleType.fixedCost;
@@ -64,6 +65,8 @@ bool Solution::hasExcessLoad() const { return excessLoad_ > 0; }
 bool Solution::hasTimeWarp() const { return timeWarp_ > 0; }
 
 Distance Solution::distance() const { return distance_; }
+
+Duration Solution::duration() const { return duration_; }
 
 Load Solution::excessLoad() const { return excessLoad_; }
 

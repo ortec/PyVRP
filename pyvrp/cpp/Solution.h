@@ -216,6 +216,7 @@ private:
     size_t numClients_ = 0;         // Number of clients in the solution
     size_t numMissingClients_ = 0;  // Number of required but missing clients
     Distance distance_ = 0;         // Total distance
+    Duration duration_ = 0;         // Total duration
     Load excessLoad_ = 0;           // Total excess load over all routes
     Cost fixedVehicleCost_ = 0;     // Fixed cost of all used vehicles
     Cost distanceCost_ = 0;         // Cost for travelled distance of routes
@@ -347,6 +348,16 @@ public:
      *     Total distance over all routes.
      */
     [[nodiscard]] Distance distance() const;
+
+    /**
+     * Returns the total duration over all routes.
+     *
+     * Returns
+     * -------
+     * int
+     *     Total duration over all routes.
+     */
+    [[nodiscard]] Duration duration() const;
 
     /**
      * Returns the total excess load over all routes.

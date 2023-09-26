@@ -180,6 +180,80 @@ def test_swap_between_routes_OkSmall(ok_small):
     assert_(improved_cost < current_cost)
 
 
+@mark.parametrize(
+    ("cost_per_distance", "cost_per_duration"),
+    [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (25, 12)],
+)
+def test_swap_duration_objective(
+    cost_per_distance: int, cost_per_duration: int
+):
+    """
+    Tests that (1, 1)-exchange takes into account duration in the objective.
+    """
+    # This test is essentially the same as test_relocate_duration_objective,
+    # but adds an extra client 3 in between 1 and 2 on the same location as
+    # client 2, since swap cannot swap two adjacent clients 1 and 2.
+    clients = [
+        Client(x=1, y=0, tw_early=0, tw_late=1000),
+        Client(x=2, y=0, tw_early=0, tw_late=1000),
+        Client(x=2, y=0, tw_early=0, tw_late=1000),
+    ]
+
+    # Distance-wise, the best route is 0 -> 1 -> 3 -> 2 -> 0 (dist 3, dur 30).
+    # Duration-wise, the best route is 0 -> 2 -> 3 -> 1 -> 0 (dist 15, dur 5).
+    data = ProblemData(
+        clients=clients,
+        depots=[Client(x=0, y=0, tw_early=0, tw_late=100)],
+        vehicle_types=[
+            VehicleType(
+                0,
+                1,
+                cost_per_distance=cost_per_distance,
+                cost_per_duration=cost_per_duration,
+            )
+        ],
+        distance_matrix=np.asarray(
+            [[0, 1, 5, 5], [5, 0, 1, 1], [1, 5, 0, 0], [1, 5, 0, 0]]
+        ),
+        duration_matrix=np.asarray(
+            [[0, 10, 2, 2], [1, 0, 10, 10], [10, 2, 0, 0], [10, 2, 0, 0]]
+        ),
+    )
+
+    # We consider two solutions. The first is distance optimal, and the second
+    # duration optimal. Both are feasible, so which one is preferred depends
+    # on the coefficients in the objective.
+    distance_optimal = Solution(data, [[1, 3, 2]])
+    duration_optimal = Solution(data, [[2, 3, 1]])
+
+    assert_equal(distance_optimal.distance(), 3)
+    assert_equal(distance_optimal.duration(), 30)
+    assert_equal(duration_optimal.distance(), 15)
+    assert_equal(duration_optimal.duration(), 5)
+
+    cost_distance_optimal = 3 * cost_per_distance + 30 * cost_per_duration
+    cost_duration_optimal = 15 * cost_per_distance + 5 * cost_per_duration
+
+    cost_evaluator = CostEvaluator(1, 1)
+    rng = RandomNumberGenerator(seed=42)
+    ls = LocalSearch(data, rng, compute_neighbours(data))
+    ls.add_node_operator(Exchange11(data))
+
+    ls_distance_optimal = ls.search(distance_optimal, cost_evaluator)
+    ls_duration_optimal = ls.search(duration_optimal, cost_evaluator)
+
+    if cost_distance_optimal < cost_duration_optimal:
+        assert_equal(ls_distance_optimal, distance_optimal)
+        assert_equal(ls_duration_optimal, distance_optimal)
+    elif cost_distance_optimal > cost_duration_optimal:
+        assert_equal(ls_distance_optimal, duration_optimal)
+        assert_equal(ls_duration_optimal, duration_optimal)
+    else:
+        # Both solutions same objective, start solution should not change
+        assert_equal(ls_distance_optimal, distance_optimal)
+        assert_equal(ls_duration_optimal, duration_optimal)
+
+
 def test_relocate_after_depot_should_work(ok_small):
     """
     This test exercises the bug identified in issue #142, involving a relocate
@@ -266,6 +340,84 @@ def test_relocate_only_happens_when_distance_and_duration_allow_it():
 
     assert_equal(ls.search(duration_optimal, cost_evaluator), duration_optimal)
     assert_equal(ls.search(distance_optimal, cost_evaluator), duration_optimal)
+
+
+@mark.parametrize(
+    ("cost_per_distance", "cost_per_duration"),
+    [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (25, 12)],
+)
+def test_relocate_duration_objective(
+    cost_per_distance: int, cost_per_duration: int
+):
+    """
+    Tests that (1, 0)-exchange takes into account duration in the objective.
+    """
+    clients = [
+        Client(x=1, y=0, tw_early=0, tw_late=1000),
+        Client(x=2, y=0, tw_early=0, tw_late=1000),
+    ]
+
+    # Distance-wise, the best route is 0 -> 1 -> 2 -> 0 (dist 3, duration 30).
+    # Duration-wise, the best route is 0 -> 2 -> 1 -> 0 (dist 15, duration 5).
+    data = ProblemData(
+        clients=clients,
+        depots=[Client(x=0, y=0, tw_early=0, tw_late=100)],
+        vehicle_types=[
+            VehicleType(
+                0,
+                1,
+                cost_per_distance=cost_per_distance,
+                cost_per_duration=cost_per_duration,
+            )
+        ],
+        distance_matrix=np.asarray(
+            [
+                [0, 1, 5],
+                [5, 0, 1],
+                [1, 5, 0],
+            ]
+        ),
+        duration_matrix=np.asarray(
+            [
+                [0, 10, 2],
+                [1, 0, 10],
+                [10, 2, 0],
+            ]
+        ),
+    )
+
+    # We consider two solutions. The first is distance optimal, and the second
+    # duration optimal. Both are feasible, so which one is preferred depends
+    # on the coefficients in the objective.
+    distance_optimal = Solution(data, [[1, 2]])
+    duration_optimal = Solution(data, [[2, 1]])
+
+    assert_equal(distance_optimal.distance(), 3)
+    assert_equal(distance_optimal.duration(), 30)
+    assert_equal(duration_optimal.distance(), 15)
+    assert_equal(duration_optimal.duration(), 5)
+
+    cost_distance_optimal = 3 * cost_per_distance + 30 * cost_per_duration
+    cost_duration_optimal = 15 * cost_per_distance + 5 * cost_per_duration
+
+    cost_evaluator = CostEvaluator(1, 1)
+    rng = RandomNumberGenerator(seed=42)
+    ls = LocalSearch(data, rng, compute_neighbours(data))
+    ls.add_node_operator(Exchange10(data))
+
+    ls_distance_optimal = ls.search(distance_optimal, cost_evaluator)
+    ls_duration_optimal = ls.search(duration_optimal, cost_evaluator)
+
+    if cost_distance_optimal < cost_duration_optimal:
+        assert_equal(ls_distance_optimal, distance_optimal)
+        assert_equal(ls_duration_optimal, distance_optimal)
+    elif cost_distance_optimal > cost_duration_optimal:
+        assert_equal(ls_distance_optimal, duration_optimal)
+        assert_equal(ls_duration_optimal, duration_optimal)
+    else:
+        # Both solutions same objective, start solution should not change
+        assert_equal(ls_distance_optimal, distance_optimal)
+        assert_equal(ls_duration_optimal, duration_optimal)
 
 
 def test_relocate_to_heterogeneous_empty_route(ok_small):
