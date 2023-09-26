@@ -78,6 +78,7 @@ def test_add_client_attributes():
         release_time=7,
         prize=8,
         required=False,
+        fixed_vehicle_type=None,
     )
 
     assert_equal(client.x, 1)
@@ -89,6 +90,25 @@ def test_add_client_attributes():
     assert_equal(client.release_time, 7)
     assert_equal(client.prize, 8)
     assert_(not client.required)
+    assert_equal(client.fixed_vehicle_type, None)
+
+
+def test_add_client_with_fixed_vehicle_type():
+    """
+    Smoke test that checks, for a single client, if the fixed vehicle type is
+    added correctly.
+    """
+    model = Model()
+    veh_type_1 = model.add_vehicle_type(10, 1)
+    veh_type_2 = model.add_vehicle_type(10, 1)
+    client = model.add_client(
+        x=1,
+        y=2,
+        fixed_vehicle_type=veh_type_2,
+    )
+
+    assert_(model.vehicle_types[client.fixed_vehicle_type] != veh_type_1)
+    assert_equal(model.vehicle_types[client.fixed_vehicle_type], veh_type_2)
 
 
 def test_add_depot_attributes():

@@ -116,6 +116,7 @@ class Model:
         release_time: int = 0,
         prize: int = 0,
         required: bool = True,
+        fixed_vehicle_type: Optional[VehicleType] = None,
     ) -> Client:
         """
         Adds a client with the given attributes to the model. Returns the
@@ -131,6 +132,9 @@ class Model:
             release_time,
             prize,
             required,
+            None
+            if fixed_vehicle_type is None
+            else self.vehicle_types.index(fixed_vehicle_type),
         )
 
         self._clients.append(client)
