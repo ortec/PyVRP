@@ -5,6 +5,7 @@
 #include <cmath>
 
 using Client = size_t;
+using VehicleType = size_t;
 using Clients = std::vector<Client>;
 using Route = pyvrp::Solution::Route;
 using Routes = std::vector<Route>;
@@ -186,9 +187,15 @@ pyvrp::Solution pyvrp::crossover::selectiveRouteExchange(
     {
         size_t indexA = (startA + r) % nRoutesA;
         size_t indexB = (startB + r) % nRoutesB;
+        // Offspring always gets vehicle type from parent A.
+        VehicleType vehType = routesA[indexA].vehicleType();
 
         for (Client c : routesB[indexB])
         {
+            // Skip if this would cause a fixed vehicle type violation.
+            if (data.location(c).fixedVehicleType.value_or(vehType) != vehType)
+                continue;
+
             visits1[indexA].push_back(c);  // c in B
 
             if (!selectedBNotA[c])
@@ -224,6 +231,15 @@ pyvrp::Solution pyvrp::crossover::selectiveRouteExchange(
 
     auto const sol1 = Solution(data, routes1);
     auto const sol2 = Solution(data, routes2);
+
+    // Due to client fixed vehicle restrictions, it can happen that there is a
+    // difference in the number of assigned clients between the offspring. In
+    // this case we prefer the solution with most clients assigned as comparing
+    // (penalized) costs is incorrect as there is no penalty for required
+    // clients.
+    if (sol1.numMissingClients() != sol2.numMissingClients())
+        return sol1.numMissingClients() < sol2.numMissingClients() ? sol1
+                                                                   : sol2;
 
     auto const cost1 = costEvaluator.penalisedCost(sol1);
     auto const cost2 = costEvaluator.penalisedCost(sol2);

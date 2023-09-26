@@ -780,6 +780,41 @@ def test_route_centroid(ok_small):
         assert_allclose(y_center, y[route].mean())
 
 
+def test_route_validates_client_fixed_vehicle_type(ok_small):
+    """
+    Tests that each route validates the fixed vehicle type for clients assigned
+    to the route.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(ok_small.clients(), (0, 1, None, None))
+        ],
+        vehicle_types=[
+            VehicleType(1, 10),
+            VehicleType(1, 10),
+        ],
+    )
+    # This should not raise
+    Route(data, [1, 3], 0)
+    Route(data, [2, 3], 1)
+    Route(data, [3, 4], 0)
+    Route(data, [3, 4], 1)
+    with assert_raises(RuntimeError):
+        Route(data, [1], 1)
+    with assert_raises(RuntimeError):
+        Route(data, [1, 3], 1)
+    with assert_raises(RuntimeError):
+        Route(data, [2], 0)
+    with assert_raises(RuntimeError):
+        Route(data, [2, 4], 0)
+
+
 def test_solution_can_be_pickled(ok_small):
     """
     Tests that a solution can be serialised and unserialised.

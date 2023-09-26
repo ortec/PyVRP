@@ -4,6 +4,7 @@ from numpy.testing import assert_, assert_equal, assert_raises
 from pytest import mark
 
 from pyvrp import (
+    Client,
     CostEvaluator,
     RandomNumberGenerator,
     Route,
@@ -124,7 +125,7 @@ def test_srex_sorts_routes(ok_small):
 def test_srex_does_not_reinsert_unplanned_clients(ok_small):
     """
     Tests the case where the routes are not perfectly complementary. In that
-    case, some clients will no longer in the solution after crossover: SREX
+    case, some clients will no longer be in the solution after crossover: SREX
     does not reinsert those, but instead leaves that to the search method.
     """
     cost_evaluator = CostEvaluator(20, 6)
@@ -142,6 +143,52 @@ def test_srex_does_not_reinsert_unplanned_clients(ok_small):
     # first one is returned.
     offspring = cpp_srex((sol1, sol2), ok_small, cost_evaluator, (0, 0), 1)
     expected = Solution(ok_small, [[2, 3], [1]])
+    assert_equal(offspring, expected)
+    assert_(not expected.is_complete())
+
+
+def test_srex_respects_fixed_vehicle_types(ok_small):
+    """
+    Tests the case where a client due to a crossover would potentially be
+    assigned to a route with a vehicle type that is different from the fixed
+    vehicle type for the client. In that case, the client will not be assigned
+    to the route and it will be 'missing'. The solution with the least missing
+    clients will be returned before comparing the penalized cost.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(
+                ok_small.clients(), (None, 1, None, None)
+            )
+        ],
+        vehicle_types=[VehicleType(10, 1), VehicleType(20, 1)],
+    )
+
+    cost_evaluator = CostEvaluator(20, 6)
+
+    # Note that when routes are exchanged, some customers will necessarily be
+    # removed from the solution because the routes are overlapping. The
+    # offspring are thus incomplete.
+    sol1 = Solution(data, [Route(data, [3, 4], 0), Route(data, [1, 2], 1)])
+    sol2 = Solution(data, [Route(data, [2, 3], 1), Route(data, [4, 1], 0)])
+
+    # The start indices do not change because there are no improving moves.
+    # So, sol1's route [3, 4] (vehicle type 0) will be replaced by sol2's route
+    # [2, 3] (vehicle type 1). This would result in two incomplete offspring
+    # [[2, 3], [1]] and [[3], [1, 2]], with vehicle types 0 and 1, but since
+    # client 2 must be assigned to vehicle type 1, the first offspring is not
+    # valid and will be [[3], [1]] instead. Since this has more missing clients
+    # the second offspring will be returned.
+    offspring = cpp_srex((sol1, sol2), data, cost_evaluator, (0, 0), 1)
+    expected = sol1 = Solution(
+        data, [Route(data, [3], 0), Route(data, [1, 2], 1)]
+    )
     assert_equal(offspring, expected)
     assert_(not expected.is_complete())
 

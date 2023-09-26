@@ -322,6 +322,13 @@ Solution::Route::Route(ProblemData const &data,
         auto const client = visits_[idx];
         auto const &clientData = data.location(client);
 
+        if (clientData.fixedVehicleType.value_or(vehicleType) != vehicleType)
+        {
+            std::ostringstream msg;
+            msg << "Client " << client << " assigned to wrong vehicle type.";
+            throw std::runtime_error(msg.str());
+        }
+
         distance_ += data.dist(prevClient, client);
         travel_ += data.duration(prevClient, client);
         demand_ += clientData.demand;
