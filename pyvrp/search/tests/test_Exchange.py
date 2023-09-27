@@ -184,9 +184,7 @@ def test_swap_between_routes_OkSmall(ok_small):
     ("cost_per_distance", "cost_per_duration"),
     [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (25, 12)],
 )
-def test_swap_duration_objective(
-    cost_per_distance: int, cost_per_duration: int
-):
+def test_swap_duration_objective(cost_per_distance, cost_per_duration):
     """
     Tests that (1, 1)-exchange takes into account duration in the objective.
     """
@@ -346,9 +344,7 @@ def test_relocate_only_happens_when_distance_and_duration_allow_it():
     ("cost_per_distance", "cost_per_duration"),
     [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (25, 12)],
 )
-def test_relocate_duration_objective(
-    cost_per_distance: int, cost_per_duration: int
-):
+def test_relocate_duration_objective(cost_per_distance, cost_per_duration):
     """
     Tests that (1, 0)-exchange takes into account duration in the objective.
     """

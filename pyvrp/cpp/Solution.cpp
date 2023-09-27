@@ -94,10 +94,10 @@ void Solution::makeNeighbours()
 bool Solution::operator==(Solution const &other) const
 {
     // First compare simple attributes, since that's quick and cheap.
-    bool const simpleChecks = distance_ == other.distance_
-                              && excessLoad_ == other.excessLoad_
-                              && timeWarp_ == other.timeWarp_
-                              && routes_.size() == other.routes_.size();
+    bool const simpleChecks
+        = distance_ == other.distance_ && duration_ == other.duration_
+          && excessLoad_ == other.excessLoad_ && timeWarp_ == other.timeWarp_
+          && routes_.size() == other.routes_.size();
 
     if (!simpleChecks)
         return false;
@@ -219,6 +219,7 @@ Solution::Solution(ProblemData const &data, std::vector<Route> const &routes)
 Solution::Solution(size_t numClients,
                    size_t numMissingClients,
                    Distance distance,
+                   Duration duration,
                    Load excessLoad,
                    Cost fixedVehicleCost,
                    Cost prizes,
@@ -229,6 +230,7 @@ Solution::Solution(size_t numClients,
     : numClients_(numClients),
       numMissingClients_(numMissingClients),
       distance_(distance),
+      duration_(duration),
       excessLoad_(excessLoad),
       fixedVehicleCost_(fixedVehicleCost),
       prizes_(prizes),

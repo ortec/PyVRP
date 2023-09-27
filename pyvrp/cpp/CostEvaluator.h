@@ -29,6 +29,7 @@ template <typename T> concept CostEvaluatable = requires(T arg)
  *     size: int,
  *     distance: Distance,
  *     load: Load,
+ *     duration: Duration,
  *     timeWarp: Duration
  * )
  *

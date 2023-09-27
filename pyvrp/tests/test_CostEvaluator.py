@@ -159,6 +159,40 @@ def test_penalised_cost(ok_small):
     assert_allclose(default_evaluator.penalised_cost(infeas), infeas_dist)
 
 
+def test_penalised_cost_duration_objective(ok_small):
+    """
+    The penalised cost represents the smoothed objective, where constraint
+    violations are priced in using penalty terms. It can be computed for both
+    feasible and infeasible solutions. In case of the former, it is equal
+    to the actual cost: the penalty terms are all zero.
+    """
+    data = ok_small.replace(
+        vehicle_types=[
+            VehicleType(10, 5, cost_per_distance=0, cost_per_duration=1)
+        ]
+    )
+    penalty_capacity = 20
+    penalty_tw = 6
+    default_evaluator = CostEvaluator()
+    cost_evaluator = CostEvaluator(penalty_capacity, penalty_tw)
+    feas = Solution(data, [[1, 2], [3], [4]])
+    assert_(feas.is_feasible())
+    # For a feasible solution, cost and penalised_cost equal duration.
+    assert_allclose(cost_evaluator.penalised_cost(feas), feas.duration())
+    assert_allclose(default_evaluator.penalised_cost(feas), feas.duration())
+    infeas = Solution(data, [[1, 2, 3, 4]])
+    assert_(not infeas.is_feasible())
+    # Compute cost associated with violated constraints.
+    load_penalty_cost = penalty_capacity * infeas.excess_load()
+    tw_penalty_cost = penalty_tw * infeas.time_warp()
+    infeas_duration = infeas.duration()
+    # Test penalised cost
+    expected_cost = infeas_duration + load_penalty_cost + tw_penalty_cost
+    assert_allclose(cost_evaluator.penalised_cost(infeas), expected_cost)
+    # Default cost evaluator has 0 weights and only computes duration as cost
+    assert_allclose(default_evaluator.penalised_cost(infeas), infeas_duration)
+
+
 def test_route_penalised_cost():
     """
     The penalised cost represents the smoothed objective, where constraint
@@ -188,6 +222,17 @@ def test_route_penalised_cost():
     # 6 * 20 = 120, beyond the fixed and distance cost so 110 + 40 + 120 = 270
     cost = cost_evaluator.penalised_cost(route_data, vehicle_type)
     assert_allclose(cost, 270)
+
+    # Test duration objective
+    vehicle_type = VehicleType(
+        10, 1, cost_per_distance=0, cost_per_duration=10
+    )
+    route_data = RouteData(
+        size=1, distance=10, load=5, duration=30, time_warp=0
+    )
+    # We should have 30 * 10 = 300 cost for duration
+    cost = cost_evaluator.penalised_cost(route_data, vehicle_type)
+    assert_allclose(cost, 300)
 
     # Test empty route
     route_data = RouteData(size=0, distance=0, load=0, duration=0, time_warp=0)

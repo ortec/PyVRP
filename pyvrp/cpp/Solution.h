@@ -477,6 +477,7 @@ public:
     Solution(size_t numClients,
              size_t numMissingClients,
              Distance distance,
+             Duration duration,
              Load excessLoad,
              Cost fixedVehicleCost,
              Cost prizes,

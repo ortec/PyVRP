@@ -401,6 +401,7 @@ PYBIND11_MODULE(_pyvrp, m)
                 return py::make_tuple(sol.numClients(),
                                       sol.numMissingClients(),
                                       sol.distance(),
+                                      sol.duration(),
                                       sol.excessLoad(),
                                       sol.fixedVehicleCost(),
                                       sol.prizes(),
@@ -418,13 +419,14 @@ PYBIND11_MODULE(_pyvrp, m)
                     = Solution(t[0].cast<size_t>(),           // num clients
                                t[1].cast<size_t>(),           // num missing
                                t[2].cast<pyvrp::Distance>(),  // distance
-                               t[3].cast<pyvrp::Load>(),      // excess load
-                               t[4].cast<pyvrp::Cost>(),      // fixed veh cost
-                               t[5].cast<pyvrp::Cost>(),      // prizes
-                               t[6].cast<pyvrp::Cost>(),      // uncollected
-                               t[7].cast<pyvrp::Duration>(),  // time warp
-                               t[8].cast<Routes>(),           // routes
-                               t[9].cast<Neighbours>());      // neighbours
+                               t[3].cast<pyvrp::Duration>(),  // duration
+                               t[4].cast<pyvrp::Load>(),      // excess load
+                               t[5].cast<pyvrp::Cost>(),      // fixed veh cost
+                               t[6].cast<pyvrp::Cost>(),      // prizes
+                               t[7].cast<pyvrp::Cost>(),      // uncollected
+                               t[8].cast<pyvrp::Duration>(),  // time warp
+                               t[9].cast<Routes>(),           // routes
+                               t[10].cast<Neighbours>());     // neighbours
 
                 return sol;
             }))
