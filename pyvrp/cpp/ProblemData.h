@@ -85,7 +85,7 @@ public:
      * required
      *     Whether this client must be part of a feasible solution. Default
      *     True.
-     * fixed_vehicle_type, optional
+     * fixed_vehicle_type
      *     Vehicle type that this client must be assigned to (optional).
      */
     struct Client
