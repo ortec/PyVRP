@@ -211,10 +211,20 @@ def test_swap_duration_objective(cost_per_distance, cost_per_duration):
             )
         ],
         distance_matrix=np.asarray(
-            [[0, 1, 5, 5], [5, 0, 1, 1], [1, 5, 0, 0], [1, 5, 0, 0]]
+            [
+                [0, 1, 5, 5],
+                [5, 0, 1, 1],
+                [1, 5, 0, 0],
+                [1, 5, 0, 0],
+            ]
         ),
         duration_matrix=np.asarray(
-            [[0, 10, 2, 2], [1, 0, 10, 10], [10, 2, 0, 0], [10, 2, 0, 0]]
+            [
+                [0, 10, 2, 2],
+                [1, 0, 10, 10],
+                [10, 2, 0, 0],
+                [10, 2, 0, 0],
+            ]
         ),
     )
 

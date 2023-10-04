@@ -416,15 +416,7 @@ def test_matrices_are_not_copies():
         (-100, 1, 0, 1, 0, 0, 0),  # this is just wrong
         (1, 1, -1, 1, 0, 0, 0),  # fixed_cost cannot be negative
         (0, 1, -100, 1, 0, 0, 0),  # this is just wrong
-        (
-            0,
-            1,
-            0,
-            1,
-            0,
-            None,
-            0,
-        ),  # both shift time windows must be given (if set)
+        (0, 1, 0, 1, 0, None, 0),  # early must be set if late is set
         (
             0,
             1,
@@ -433,9 +425,11 @@ def test_matrices_are_not_copies():
             0,
             0,
             None,
-        ),  # both shift time windows must be given (if set)
+        ),  # late must be set if early is set
         (0, 1, 0, 1, 0, 1, 0),  # early > late
         (0, 1, 0, 1, 0, -1, 0),  # negative early
+        (0, 1, 0, -1, 0, 0, 0),  # cost_per_distance cannot be negative
+        (0, 1, 0, 1, -1, 0, 0),  # cost_per_duration cannot be negative
     ],
 )
 def test_vehicle_type_raises_invalid_data(

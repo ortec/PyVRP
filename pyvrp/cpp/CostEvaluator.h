@@ -147,8 +147,8 @@ public:
      * :math:`c^f_{t_R}`, a cost per distance travelled :math:`c^d_{t_R}` and
      * a cost per unit of duration (time) :math:`c^t_{t_R}`. Let
      * :math:`V_R = \{i : (i, j) \in R \}` be the set of locations visited by
-     * route :math:`R` and let `T_R` be the total duration (time) of the route.
-     * The objective value is then given by
+     * route :math:`R` and let :math:`T_R` be the total duration (time) of the
+     * route. The objective value is then given by
      *
      * .. math::
      *
