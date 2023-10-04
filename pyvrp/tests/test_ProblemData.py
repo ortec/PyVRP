@@ -417,15 +417,7 @@ def test_matrices_are_not_copies():
         (1, 1, -1, 1, 0, 0, 0),  # fixed_cost cannot be negative
         (0, 1, -100, 1, 0, 0, 0),  # this is just wrong
         (0, 1, 0, 1, 0, None, 0),  # early must be set if late is set
-        (
-            0,
-            1,
-            0,
-            1,
-            0,
-            0,
-            None,
-        ),  # late must be set if early is set
+        (0, 1, 0, 1, 0, 0, None),  # late must be set if early is set
         (0, 1, 0, 1, 0, 1, 0),  # early > late
         (0, 1, 0, 1, 0, -1, 0),  # negative early
         (0, 1, 0, -1, 0, 0, 0),  # cost_per_distance cannot be negative
