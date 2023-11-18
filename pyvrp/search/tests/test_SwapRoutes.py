@@ -3,7 +3,7 @@ from typing import List
 import pytest
 from numpy.testing import assert_, assert_allclose, assert_equal
 
-from pyvrp import CostEvaluator, VehicleType
+from pyvrp import Client, CostEvaluator, VehicleType
 from pyvrp.search import SwapRoutes
 from pyvrp.search._search import Node, Route
 
@@ -66,6 +66,62 @@ def test_evaluate_same_vehicle_type(ok_small):
     op = SwapRoutes(ok_small)
     cost_eval = CostEvaluator(1, 1)
     assert_allclose(op.evaluate(route1, route2, cost_eval), 0)
+
+
+def test_evaluate_fixed_clients(ok_small):
+    """
+    Tests that evaluate() returns 0 in case different vehicle types are used
+    with fixed clients, since in that case swapping results in clients being
+    assigned to wrong vehicle type.
+    """
+    data = ok_small.replace(
+        clients=[
+            Client(
+                x=client.x,
+                y=client.y,
+                demand=client.demand,
+                fixed_vehicle_type=veh_type,
+            )
+            for client, veh_type in zip(ok_small.clients(), (0, 1, None, None))
+        ],
+        vehicle_types=[
+            VehicleType(5, 1),
+            VehicleType(20, 1),
+            VehicleType(20, 2),
+        ],
+    )
+
+    route1 = Route(data, idx=0, vehicle_type=0)
+    route2 = Route(data, idx=1, vehicle_type=1)
+    route3 = Route(data, idx=2, vehicle_type=2)
+
+    route1.append(Node(loc=1))
+    route1.append(Node(loc=3))
+    route2.append(Node(loc=2))
+    route3.append(Node(loc=4))
+
+    route1.update()
+    route2.update()
+    route3.update()
+
+    # route1 has vehicle type 0, which has capacity 5. So there is excess load
+    # since its client demand sums to 8.
+    assert_(route1.has_excess_load())
+    assert_allclose(route1.load(), 8)
+
+    # route2 and route3 have capacity 20 and a load of only 5.
+    assert_(not route2.has_excess_load())
+    assert_allclose(route2.load(), 5)
+    assert_(not route3.has_excess_load())
+    assert_allclose(route3.load(), 5)
+
+    op = SwapRoutes(data)
+    cost_eval = CostEvaluator(1, 1)
+
+    # Swapping route1 with route2 or route3 would result in a solution without
+    # excess load, however at least one of the routes has fixed clients.
+    assert_allclose(op.evaluate(route1, route2, cost_eval), 0)
+    assert_allclose(op.evaluate(route1, route3, cost_eval), 0)
 
 
 def test_evaluate_empty_routes(ok_small):
